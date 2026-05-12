@@ -1,0 +1,10 @@
+{
+  "name": "cvmb",
+  "private": true,
+  "workspaces": ["frontend", "backend"],
+  "scripts": {
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev": "echo 'Run frontend and backend separately: npm run dev:frontend && npm run dev:backend'"
+  }
+}

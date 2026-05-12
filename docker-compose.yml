@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: cvmb-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: cvmb
+      POSTGRES_PASSWORD: cvmb
+      POSTGRES_DB: cvmb
+    ports:
+      - "5432:5432"
+    volumes:
+      - cvmb_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  cvmb_postgres_data:
