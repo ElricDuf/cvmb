@@ -34,14 +34,11 @@ npx prisma migrate dev --name init
 4. Run apps:
 
 ```bash
-# Start backend
-cd backend
-npm run dev
-
-# In a separate terminal, start frontend
-cd frontend
 npm run dev
 ```
+
+This single command starts the backend first, then launches the frontend once the API is ready.
+On a fresh database, it also runs migrations and seeders automatically before starting the API.
 
 Files of interest
 - frontend

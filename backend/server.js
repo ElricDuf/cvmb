@@ -56,7 +56,7 @@ app.get('/api/questionnaire', async (req, res, next) => {
           where: {
             active: true,
             AND: [
-              { OR: [{ secteur: null }, { secteur }] },
+              { OR: [{ secteur: null }, { secteur: sector }] },
               { OR: [{ taille: null }, { taille: size }] },
             ],
           },

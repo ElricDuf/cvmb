@@ -9,6 +9,7 @@
     "db:migrate": "npx prisma migrate deploy",
     "db:migrate:dev": "npx prisma migrate dev --name init",
     "db:seed": "node prisma/seed.js",
+    "prepare-db": "node prisma/prepare-db.js",
     "setup-db": "npx prisma migrate deploy && node prisma/seed.js",
     "reset-db": "npx prisma migrate reset --force && node prisma/seed.js"
   },
