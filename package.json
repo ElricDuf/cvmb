@@ -5,6 +5,7 @@
   "scripts": {
     "dev:frontend": "npm --prefix frontend run dev",
     "dev:backend": "npm --prefix backend run dev",
-    "dev": "echo 'Run frontend and backend separately: npm run dev:frontend && npm run dev:backend'"
+    "dev": "node -e \"console.log('Run frontend and backend separately: npm run dev:frontend && npm run dev:backend')\"",
+    "setup:db": "npm --prefix backend run setup-db"
   }
 }

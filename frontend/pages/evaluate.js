@@ -124,7 +124,13 @@ export default function EvaluatePage() {
 
   const handleSubmit = (event) => {
     event.preventDefault()
-    router.push('/questionnaire')
+    router.push({
+      pathname: '/questionnaire',
+      query: {
+        size: companySize,
+        sector: selectedSector,
+      },
+    })
   }
 
   return (

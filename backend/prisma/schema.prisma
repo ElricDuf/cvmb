@@ -1,3 +1,8 @@
+// ============================================================
+//  BASE DE DONNÉES — Comment Va Ma Boîte (CVMB)
+//  Version mise à jour avec optimisations (sans histo fi)
+// ============================================================
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -7,8 +12,185 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id    Int    @id @default(autoincrement())
-  name  String
-  email String @unique
+// ============================================================
+// Tables
+// ============================================================
+
+model Cci {
+  id           Int       @id @default(autoincrement())
+  nom          String    @db.VarChar(200) // ex: CCI Bordeaux Gironde
+  code         String    @unique @db.VarChar(20) // ex: 33, 75
+  region       String?   @db.VarChar(100)
+  est_national Boolean   @default(false) // TRUE = siège national BG
+  cree_le      DateTime  @default(now())
+
+  utilisateurs Utilisateur[]
+  entreprises  Entreprise[]
+
+  @@map("cci")
+}
+
+model Utilisateur {
+  id                 Int       @id @default(autoincrement())
+  email              String    @unique @db.VarChar(255)
+  mot_de_passe       String    @db.VarChar(255) // hashé bcrypt
+  prenom             String?   @db.VarChar(100)
+  nom                String?   @db.VarChar(100)
+  telephone          String?   @db.VarChar(20)
+  role               String    @db.VarChar(30) // dirigeant | conseiller | admin_local | admin_national
+  cci_id             Int?      // NULL pour les dirigeants
+  actif              Boolean   @default(true)
+  derniere_connexion DateTime?
+  cree_le            DateTime  @default(now())
+
+  cci             Cci?              @relation(fields: [cci_id], references: [id])
+  entreprises     Entreprise[]      @relation("dirigeant")
+  rendez_vous     RendezVous[]
+
+  @@map("utilisateur")
+}
+
+model Entreprise {
+  id               Int       @id @default(autoincrement())
+  dirigeant_id     Int
+  siret            String?   @unique @db.VarChar(14)
+  raison_sociale   String?   @db.VarChar(255)
+  code_postal      String?   @db.VarChar(10) // AJOUT: Issu API Sirene, sert au routage vers la CCI locale
+  secteur          String?   @db.VarChar(50) // artisanat | commerce | profession_liberale | industrie | prestataire_services
+  taille           String?   @db.VarChar(10) // TPE | PME
+  effectif         Int?
+  chiffre_affaires Decimal?  @db.Decimal(15, 2)
+  resultat_net     Decimal?  @db.Decimal(15, 2)
+  cci_id           Int
+  cree_le          DateTime  @default(now())
+  mis_a_jour_le    DateTime  @default(now())
+
+  dirigeant   Utilisateur  @relation("dirigeant", fields: [dirigeant_id], references: [id])
+  cci         Cci          @relation(fields: [cci_id], references: [id])
+  diagnostics Diagnostic[]
+
+  @@map("entreprise")
+}
+
+model Categorie {
+  id    Int     @id @default(autoincrement())
+  nom   String  @db.VarChar(100) // ex: Trésorerie et relations bancaires
+  ordre Int     @default(0)
+
+  questions        Question[]
+  score_categories ScoreCategorie[]
+  messages         MessageRecommandation[]
+
+  @@map("categorie")
+}
+
+model Question {
+  id           Int     @id @default(autoincrement())
+  categorie_id Int
+  texte        String  @db.Text
+  secteur      String? @db.VarChar(50) // NULL = commune à tous les secteurs
+  taille       String? @db.VarChar(10) // NULL = commune TPE et PME
+  points_max   Int     @default(100)
+  ordre        Int     @default(0)
+  active       Boolean @default(true)
+
+  categorie           Categorie              @relation(fields: [categorie_id], references: [id])
+  reponses_possibles  ReponsePossible[]
+  reponses_diagnostic ReponseDiagnostic[]
+
+  @@map("question")
+}
+
+model ReponsePossible {
+  id          Int     @id @default(autoincrement())
+  question_id Int
+  texte       String  @db.Text
+  points      Int
+  ordre       Int     @default(0)
+
+  question            Question             @relation(fields: [question_id], references: [id])
+  reponses_diagnostic ReponseDiagnostic[]
+
+  @@map("reponse_possible")
+}
+
+model Diagnostic {
+  id                      Int       @id @default(autoincrement())
+  entreprise_id           Int
+  statut                  String    @default("en_cours") @db.VarChar(20) // en_cours | termine | abandonne
+  derniere_etape_atteinte String?   @db.VarChar(100) // AJOUT: Permet le suivi de l'abandon par étape pour les stats
+  score_global            Int?
+  niveau_difficulte       String?   @db.VarChar(50) // ex: Fragilité critique, Situation stable
+  pdf_url                 String?   @db.VarChar(500)
+  cree_le                 DateTime  @default(now())
+  termine_le              DateTime?
+
+  entreprise              Entreprise           @relation(fields: [entreprise_id], references: [id])
+  reponses                ReponseDiagnostic[]
+  scores_categories       ScoreCategorie[]
+  rendez_vous             RendezVous[]
+
+  @@map("diagnostic")
+}
+
+model ReponseDiagnostic {
+  id                  Int @id @default(autoincrement())
+  diagnostic_id       Int
+  question_id         Int
+  reponse_possible_id Int?
+  points_obtenus      Int @default(0)
+
+  diagnostic        Diagnostic       @relation(fields: [diagnostic_id], references: [id])
+  question          Question         @relation(fields: [question_id], references: [id])
+  reponse_possible  ReponsePossible? @relation(fields: [reponse_possible_id], references: [id])
+
+  @@unique([diagnostic_id, question_id])
+  @@map("reponse_diagnostic")
+}
+
+model ScoreCategorie {
+  id            Int @id @default(autoincrement())
+  diagnostic_id Int
+  categorie_id  Int
+  score         Int
+  score_max     Int
+
+  diagnostic Diagnostic @relation(fields: [diagnostic_id], references: [id])
+  categorie  Categorie  @relation(fields: [categorie_id], references: [id])
+
+  @@unique([diagnostic_id, categorie_id])
+  @@map("score_categorie")
+}
+
+model MessageRecommandation {
+  id           Int       @id @default(autoincrement())
+  secteur      String?   @db.VarChar(50) // NULL = tous secteurs
+  taille       String?   @db.VarChar(10) // NULL = TPE et PME
+  categorie_id Int?      // NULL = score global
+  score_min    Int
+  score_max    Int
+  titre        String?   @db.VarChar(200) // ex: Fragilité critique
+  message      String    @db.Text
+  orientation  String?   @db.Text // vers quelles structures orienter
+  cree_le      DateTime  @default(now())
+
+  categorie Categorie? @relation(fields: [categorie_id], references: [id])
+
+  @@map("message_recommandation")
+}
+
+model RendezVous {
+  id                           Int       @id @default(autoincrement())
+  diagnostic_id                Int
+  conseiller_id                Int?
+  creneau_souhaite             String?   @db.VarChar(100) // AJOUT: type texte pour plus de flexibilité (ex: mardi matin)
+  informations_complementaires String?   @db.Text
+  statut                       String    @default("demande") @db.VarChar(30) // demande | confirme | annule | realise
+  cree_le                      DateTime  @default(now())
+  mis_a_jour_le                DateTime  @default(now())
+
+  diagnostic Diagnostic  @relation(fields: [diagnostic_id], references: [id])
+  conseiller Utilisateur? @relation(fields: [conseiller_id], references: [id])
+
+  @@map("rendez_vous")
 }

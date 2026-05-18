@@ -9,11 +9,102 @@ const app = express()
 const port = process.env.PORT || 4000
 const prisma = new PrismaClient()
 
+const allowedCompanySizes = new Set(['TPE', 'PME'])
+const sectorAliases = {
+  merchant: 'commerce',
+  commerce: 'commerce',
+  artisan: 'artisan',
+  liberal: 'liberal',
+  industrial: 'industrial',
+  services: 'services',
+}
+
+function normalizeCompanySize(value) {
+  const normalized = String(value || '').trim().toUpperCase()
+  return allowedCompanySizes.has(normalized) ? normalized : null
+}
+
+function normalizeSector(value) {
+  const normalized = String(value || '').trim().toLowerCase()
+  return sectorAliases[normalized] || null
+}
+
 app.use(cors())
 app.use(express.json())
 
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok' })
+})
+
+app.get('/api/questionnaire', async (req, res, next) => {
+  try {
+    const size = normalizeCompanySize(req.query.size)
+    const sector = normalizeSector(req.query.sector)
+
+    if (!size) {
+      return res.status(400).json({ error: 'size must be one of TPE or PME' })
+    }
+
+    if (!sector) {
+      return res.status(400).json({ error: 'sector must be one of commerce, artisan, liberal, industrial or services' })
+    }
+
+    const categories = await prisma.categorie.findMany({
+      orderBy: { ordre: 'asc' },
+      include: {
+        questions: {
+          where: {
+            active: true,
+            AND: [
+              { OR: [{ secteur: null }, { secteur }] },
+              { OR: [{ taille: null }, { taille: size }] },
+            ],
+          },
+          orderBy: { ordre: 'asc' },
+          include: {
+            reponses_possibles: {
+              orderBy: { ordre: 'asc' },
+            },
+          },
+        },
+      },
+    })
+
+    const filteredCategories = categories
+      .map((category) => ({
+        id: category.id,
+        nom: category.nom,
+        ordre: category.ordre,
+        questions: category.questions.map((question) => ({
+          id: question.id,
+          categorieId: question.categorie_id,
+          texte: question.texte,
+          secteur: question.secteur,
+          taille: question.taille,
+          pointsMax: question.points_max,
+          ordre: question.ordre,
+          active: question.active,
+          responses: question.reponses_possibles.map((response) => ({
+            id: response.id,
+            questionId: response.question_id,
+            texte: response.texte,
+            points: response.points,
+            ordre: response.ordre,
+          })),
+        })),
+      }))
+      .filter((category) => category.questions.length > 0)
+
+    const questionCount = filteredCategories.reduce((total, category) => total + category.questions.length, 0)
+
+    res.json({
+      filters: { size, sector },
+      questionCount,
+      categories: filteredCategories,
+    })
+  } catch (error) {
+    next(error)
+  }
 })
 
 app.get('/api/users', (req, res) => {

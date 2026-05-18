@@ -1,32 +1,186 @@
-import { useState } from 'react'
-import Link from 'next/link'
+import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/router'
 import Layout from '../components/layout/Layout'
 
-const sections = [
-  { id: 1, title: 'Partie 1 :', label: 'Gestion administrative et comptable' },
-  { id: 2, title: 'Partie 2 :', label: 'Gestion administrative et comptable' },
-  { id: 3, title: 'Partie 3 :', label: 'Gestion administrative et comptable' },
-  { id: 4, title: 'Partie 4 :', label: 'Gestion administrative et comptable' },
-]
+const sectorLabels = {
+  commerce: 'Commerçant',
+  artisan: 'Artisan',
+  liberal: 'Profession libérale',
+  industrial: 'Industriel',
+  services: 'Prestataire de services',
+}
+
+const companySizeLabels = {
+  TPE: 'TPE',
+  PME: 'PME',
+}
 
 export default function QuestionnairePage() {
-  const [selectedOption, setSelectedOption] = useState(null)
-  const progress = 20
+  const router = useRouter()
+  const [payload, setPayload] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [currentIndex, setCurrentIndex] = useState(0)
+  const [answers, setAnswers] = useState({})
+  const [completed, setCompleted] = useState(false)
+
+  const selectedSize = useMemo(() => {
+    const value = router.query.size
+    return Array.isArray(value) ? value[0] : value
+  }, [router.query.size])
+
+  const selectedSector = useMemo(() => {
+    const value = router.query.sector
+    return Array.isArray(value) ? value[0] : value
+  }, [router.query.sector])
+
+  useEffect(() => {
+    if (!router.isReady) {
+      return
+    }
+
+    if (!selectedSize || !selectedSector) {
+      setError('Sélectionnez une taille d’entreprise et un secteur avant de commencer le questionnaire.')
+      setPayload(null)
+      setLoading(false)
+      setCompleted(false)
+      return
+    }
+
+    let cancelled = false
+
+    async function loadQuestions() {
+      setLoading(true)
+      setError('')
+      setCompleted(false)
+      setCurrentIndex(0)
+      setAnswers({})
+
+      try {
+        const response = await fetch(
+          `/api/questionnaire?size=${encodeURIComponent(selectedSize)}&sector=${encodeURIComponent(selectedSector)}`,
+        )
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Impossible de charger les questions filtrées.')
+        }
+
+        if (!cancelled) {
+          setPayload(data)
+        }
+      } catch (fetchError) {
+        if (!cancelled) {
+          setError(fetchError.message || 'Impossible de charger les questions filtrées.')
+          setPayload(null)
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadQuestions()
+
+    return () => {
+      cancelled = true
+    }
+  }, [router.isReady, selectedSize, selectedSector])
+
+  const questions = useMemo(() => {
+    if (!payload?.categories) {
+      return []
+    }
+
+    return payload.categories.flatMap((category) =>
+      category.questions.map((question) => ({
+        ...question,
+        category,
+      })),
+    )
+  }, [payload])
+
+  const currentQuestion = questions[currentIndex] || null
+  const totalQuestions = questions.length
+  const selectedAnswer = currentQuestion ? answers[currentQuestion.id] || '' : ''
+  const progress = totalQuestions > 0 ? Math.round(((currentIndex + 1) / totalQuestions) * 100) : 0
+  const activeCategoryId = currentQuestion?.category?.id || null
+
+  const handlePrevious = () => {
+    if (currentIndex === 0) {
+      router.push('/evaluate')
+      return
+    }
+
+    setCurrentIndex((value) => Math.max(value - 1, 0))
+    setCompleted(false)
+  }
+
+  const handleNext = () => {
+    if (!currentQuestion || !selectedAnswer) {
+      return
+    }
+
+    if (currentIndex >= totalQuestions - 1) {
+      setCompleted(true)
+      return
+    }
+
+    setCurrentIndex((value) => value + 1)
+  }
+
+  const handleAnswerChange = (questionId, value) => {
+    setAnswers((currentAnswers) => ({
+      ...currentAnswers,
+      [questionId]: value,
+    }))
+  }
+
+  if (!router.isReady || loading) {
+    return (
+      <Layout>
+        <div className="questionnaireContainer">
+          <div className="stateCard">
+            <p>Chargement des questions filtrées...</p>
+          </div>
+        </div>
+
+        <style jsx>{`
+          .questionnaireContainer {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 40px 24px;
+          }
+
+          .stateCard {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            padding: 40px;
+            color: #5e6274;
+            text-align: center;
+          }
+        `}</style>
+      </Layout>
+    )
+  }
 
   return (
     <Layout>
       <div className="questionnaireContainer">
-        {/* Navigation des parties */}
         <div className="sectionTabs">
-          {sections.map((s) => (
-            <div key={s.id} className="tab" data-active={s.id === 2}>
-              <span className="tabTitle">{s.title}</span>
-              <span className="tabLabel">{s.label}</span>
+          {(payload?.categories || []).map((category) => (
+            <div key={category.id} className="tab" data-active={activeCategoryId === category.id}>
+              <span className="tabTitle">Partie {category.ordre} :</span>
+              <span className="tabLabel">{category.nom}</span>
+              <span className="tabMeta">
+                {category.questions.length} question{category.questions.length > 1 ? 's' : ''}
+              </span>
             </div>
           ))}
         </div>
 
-        {/* Barre de progression */}
         <div className="progressSection">
           <div className="progressText">
             <span>PROGRESSION DU DIAGNOSTIC</span>
@@ -37,38 +191,80 @@ export default function QuestionnairePage() {
           </div>
         </div>
 
-        {/* Bouton retour */}
-        <button className="backButton">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M19 12H5M12 19l-7-7 7-7" />
-          </svg>
-          QUESTION PRÉCÉDENTE
-        </button>
-
-        {/* Carte de question */}
-        <div className="questionCard">
-          <div className="questionHeader">
-            <h2>Avez vous déjà eu recourt au chômage ?</h2>
-          </div>
-          <div className="optionsList">
-            {['Non', 'Oui'].map((option) => (
-              <label key={option} className="optionItem">
-                <input
-                  type="radio"
-                  name="chomage"
-                  value={option}
-                  checked={selectedOption === option}
-                  onChange={() => setSelectedOption(option)}
-                />
-                <span className="radioCustom" />
-                <span className="optionText">{option}</span>
-              </label>
-            ))}
-          </div>
-          <div className="cardActions">
-            <button className="submitBtn">VALIDER</button>
-          </div>
+        <div className="metaRow" aria-label="Contexte du questionnaire">
+          <span className="metaChip">Taille: {companySizeLabels[selectedSize] || selectedSize}</span>
+          <span className="metaChip">Secteur: {sectorLabels[selectedSector] || selectedSector}</span>
+          <span className="metaChip">
+            {totalQuestions} question{totalQuestions > 1 ? 's' : ''} trouvée{totalQuestions > 1 ? 's' : ''}
+          </span>
         </div>
+
+        {error ? (
+          <div className="stateCard errorCard">
+            <p>{error}</p>
+            <button type="button" className="returnButton" onClick={() => router.push('/evaluate')}>
+              Revenir à la saisie
+            </button>
+          </div>
+        ) : completed ? (
+          <div className="stateCard completionCard">
+            <p className="completionTitle">Questionnaire terminé</p>
+            <p>Toutes les questions filtrées pour cette entreprise ont été posées.</p>
+            <button type="button" className="returnButton" onClick={() => router.push('/evaluate')}>
+              Recommencer
+            </button>
+          </div>
+        ) : currentQuestion ? (
+          <>
+            <button className="backButton" type="button" onClick={handlePrevious}>
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+              {currentIndex === 0 ? 'RETOUR À LA SAISIE' : 'QUESTION PRÉCÉDENTE'}
+            </button>
+
+            <div className="questionCard">
+              <div className="questionHeader">
+                <div className="questionHeaderRow">
+                  <span className="questionIndex">
+                    Question {currentIndex + 1} / {totalQuestions}
+                  </span>
+                  <span className="questionScope">{currentQuestion.category.nom}</span>
+                </div>
+                <h2>{currentQuestion.texte}</h2>
+              </div>
+
+              <div className="optionsList">
+                {(currentQuestion.responses || []).map((option) => (
+                  <label key={option.id} className="optionItem">
+                    <input
+                      type="radio"
+                      name={`question-${currentQuestion.id}`}
+                      value={option.texte}
+                      checked={selectedAnswer === option.texte}
+                      onChange={() => handleAnswerChange(currentQuestion.id, option.texte)}
+                    />
+                    <span className="radioCustom" />
+                    <span className="optionText">{option.texte}</span>
+                  </label>
+                ))}
+              </div>
+
+              <div className="cardActions">
+                <button type="button" className="submitBtn" onClick={handleNext} disabled={!selectedAnswer}>
+                  {currentIndex >= totalQuestions - 1 ? 'TERMINER' : 'SUIVANTE'}
+                </button>
+              </div>
+            </div>
+          </>
+        ) : (
+          <div className="stateCard">
+            <p>Aucune question ne correspond aux critères sélectionnés.</p>
+            <button type="button" className="returnButton" onClick={() => router.push('/evaluate')}>
+              Modifier la sélection
+            </button>
+          </div>
+        )}
       </div>
 
       <style jsx>{`
@@ -78,19 +274,18 @@ export default function QuestionnairePage() {
           padding: 40px 24px;
         }
 
-        /* Tabs */
         .sectionTabs {
           display: grid;
-          grid-template-columns: repeat(4, 1fr);
+          grid-template-columns: repeat(4, minmax(0, 1fr));
           gap: 2px;
           border-radius: 8px;
           overflow: hidden;
-          margin-bottom: 40px;
+          margin-bottom: 24px;
         }
 
         .tab {
           background: #d9dffb;
-          padding: 20px 15px;
+          padding: 18px 15px 16px;
           text-align: left;
           color: #3d4878;
           transition: background 0.3s;
@@ -114,9 +309,18 @@ export default function QuestionnairePage() {
           display: block;
         }
 
-        /* Progress Bar */
+        .tabMeta {
+          display: inline-flex;
+          margin-top: 8px;
+          font-size: 0.72rem;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+          color: inherit;
+          opacity: 0.8;
+        }
+
         .progressSection {
-          margin-bottom: 30px;
+          margin-bottom: 18px;
         }
 
         .progressText {
@@ -148,9 +352,27 @@ export default function QuestionnairePage() {
           transition: width 0.4s ease;
         }
 
-        /* Navigation */
-        .backButton {
+        .metaRow {
           display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          margin-bottom: 20px;
+        }
+
+        .metaChip {
+          display: inline-flex;
+          align-items: center;
+          min-height: 32px;
+          padding: 0 12px;
+          border-radius: 999px;
+          background: rgba(53, 81, 242, 0.08);
+          color: #3551f2;
+          font-size: 0.82rem;
+          font-weight: 700;
+        }
+
+        .backButton {
+          display: inline-flex;
           align-items: center;
           gap: 8px;
           background: none;
@@ -163,7 +385,6 @@ export default function QuestionnairePage() {
           padding: 0;
         }
 
-        /* Question Card */
         .questionCard {
           background: #ffffff;
           border-radius: 16px;
@@ -173,15 +394,46 @@ export default function QuestionnairePage() {
 
         .questionHeader {
           background: #e7ebff;
-          padding: 30px;
+          padding: 28px 30px 30px;
           text-align: center;
+        }
+
+        .questionHeaderRow {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: 10px;
+          margin-bottom: 12px;
+        }
+
+        .questionIndex,
+        .questionScope {
+          display: inline-flex;
+          align-items: center;
+          padding: 6px 10px;
+          border-radius: 999px;
+          font-size: 0.72rem;
+          font-weight: 700;
+          letter-spacing: 0.04em;
+          text-transform: uppercase;
+        }
+
+        .questionIndex {
+          background: rgba(53, 81, 242, 0.14);
+          color: #3551f2;
+        }
+
+        .questionScope {
+          background: rgba(255, 255, 255, 0.7);
+          color: #34406f;
         }
 
         .questionHeader h2 {
           margin: 0;
-          font-size: 1.5rem;
+          font-size: 1.45rem;
           color: #1e1c28;
           font-weight: 700;
+          line-height: 1.35;
         }
 
         .optionsList {
@@ -205,8 +457,10 @@ export default function QuestionnairePage() {
           background: #f9faff;
         }
 
-        input[type='radio'] {
-          display: none;
+        .optionItem input {
+          position: absolute;
+          opacity: 0;
+          pointer-events: none;
         }
 
         .radioCustom {
@@ -216,13 +470,14 @@ export default function QuestionnairePage() {
           border-radius: 50%;
           margin-right: 15px;
           position: relative;
+          flex: 0 0 auto;
         }
 
-        input[type='radio']:checked + .radioCustom {
+        .optionItem input:checked + .radioCustom {
           border-color: #3551f2;
         }
 
-        input[type='radio']:checked + .radioCustom::after {
+        .optionItem input:checked + .radioCustom::after {
           content: '';
           position: absolute;
           inset: 3px;
@@ -241,21 +496,97 @@ export default function QuestionnairePage() {
           justify-content: flex-end;
         }
 
-        .submitBtn {
-          background: #0026e6;
-          color: white;
+        .submitBtn,
+        .returnButton {
           border: none;
-          padding: 14px 40px;
           border-radius: 8px;
           font-weight: 700;
           font-size: 0.9rem;
           cursor: pointer;
+        }
+
+        .submitBtn {
+          background: #0026e6;
+          color: white;
+          padding: 14px 40px;
           box-shadow: 0 4px 12px rgba(0, 38, 230, 0.3);
         }
 
-        @media (max-width: 768px) {
+        .submitBtn:disabled {
+          opacity: 0.5;
+          cursor: not-allowed;
+          box-shadow: none;
+        }
+
+        .stateCard {
+          background: #fff;
+          border-radius: 16px;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+          padding: 40px;
+          color: #5e6274;
+          text-align: center;
+        }
+
+        .errorCard {
+          color: #8a2d4f;
+          background: #fff7fa;
+        }
+
+        .completionCard {
+          color: #34406f;
+        }
+
+        .completionTitle {
+          margin-top: 0;
+          font-size: 1.3rem;
+          font-weight: 700;
+          color: #1e1c28;
+        }
+
+        .returnButton {
+          margin-top: 14px;
+          padding: 12px 18px;
+          background: #3551f2;
+          color: #fff;
+        }
+
+        @media (max-width: 860px) {
           .sectionTabs {
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+          }
+        }
+
+        @media (max-width: 640px) {
+          .questionnaireContainer {
+            padding: 24px 16px;
+          }
+
+          .sectionTabs {
+            grid-template-columns: 1fr;
+          }
+
+          .questionHeader h2 {
+            font-size: 1.18rem;
+          }
+
+          .optionsList {
+            padding: 20px;
+          }
+
+          .optionItem {
+            padding: 16px 18px;
+          }
+
+          .optionText {
+            font-size: 0.98rem;
+          }
+
+          .cardActions {
+            padding: 0 20px 24px;
+          }
+
+          .submitBtn {
+            width: 100%;
           }
         }
       `}</style>
