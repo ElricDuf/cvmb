@@ -1,3 +1,4 @@
+import { useRouter } from 'next/router'
 import { useState } from 'react'
 import Layout from '../components/layout/Layout'
 
@@ -117,8 +118,14 @@ function SectorIcon({ icon }) {
 }
 
 export default function EvaluatePage() {
+  const router = useRouter()
   const [companySize, setCompanySize] = useState('TPE')
   const [selectedSector, setSelectedSector] = useState('artisan')
+
+  const handleSubmit = (event) => {
+    event.preventDefault()
+    router.push('/questionnaire')
+  }
 
   return (
     <Layout>
@@ -126,7 +133,7 @@ export default function EvaluatePage() {
         <section className="formPanel" aria-labelledby="initial-form-title">
           <h1 id="initial-form-title">Saisie des informations entreprise</h1>
 
-          <form className="formGrid" onSubmit={(event) => event.preventDefault()}>
+          <form className="formGrid" onSubmit={handleSubmit}>
             <div className="fieldBlock">
               <label htmlFor="siret" className="fieldLabelRow">
                 <span className="labelText">Numéro de SIRET</span>
