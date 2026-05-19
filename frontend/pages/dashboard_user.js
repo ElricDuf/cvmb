@@ -1,4 +1,5 @@
 import Layout from '../components/layout/Layout'
+import Link from 'next/link'
 import styles from '../styles/dashboard_user.module.css'
 
 const historyItems = [
@@ -18,7 +19,7 @@ const chartPath = 'M44 150 L184 122 L324 72'
 function SidebarIcon({ type }) {
   if (type === 'history') {
     return (
-      <svg viewBox="0 0 24 24" aria-hidden="true" className="navIcon">
+      <svg viewBox="0 0 24 24" aria-hidden="true" className={styles.navIcon}>
         <path d="M6.5 7.5h9M6.5 12h9M6.5 16.5h5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
         <path d="M9 4.5h6.5a2 2 0 0 1 2 2V18a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6.5a2 2 0 0 1 2-2H9" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round" />
       </svg>
@@ -27,7 +28,7 @@ function SidebarIcon({ type }) {
 
   if (type === 'info') {
     return (
-      <svg viewBox="0 0 24 24" aria-hidden="true" className="navIcon">
+      <svg viewBox="0 0 24 24" aria-hidden="true" className={styles.navIcon}>
         <circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="1.6" />
         <path d="M12 11v5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
         <circle cx="12" cy="8" r="1" fill="currentColor" />
@@ -36,7 +37,7 @@ function SidebarIcon({ type }) {
   }
 
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="navIcon">
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={styles.navIcon}>
       <path d="M10.2 4.7c1.7-1.1 4.1-.8 5.3.8 1.1 1.4 1 3.4-.2 4.9-.5.6-1.3 1.1-2.1 1.4l-.5.2v2" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
       <circle cx="12" cy="18" r="1.2" fill="currentColor" />
     </svg>
@@ -45,7 +46,7 @@ function SidebarIcon({ type }) {
 
 function CalendarIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="historyIcon">
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={styles.historyIcon}>
       <rect x="5" y="4.8" width="14" height="15" rx="2" fill="none" stroke="currentColor" strokeWidth="1.6" />
       <path d="M8 3.8v3M16 3.8v3M5 8.4h14" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
       <path d="M8 11.2h4M8 14.3h6" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
@@ -55,66 +56,41 @@ function CalendarIcon() {
 
 function ChevronIcon() {
   return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="chevronIcon">
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={styles.chevronIcon}>
       <path d="M10 8l4 4-4 4" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   )
 }
 
-function DashboardHeader() {
-  return (
-    <header className="dashboardHeader" aria-label="En-tête du tableau de bord">
-      <div className="profileChip" aria-label="Profil utilisateur">
-        <span className="avatar">J</span>
-        <span>
-          <strong>Jean Dupont</strong>
-          <small>Entreprise</small>
-        </span>
-      </div>
-
-      <div className="headerTitle">
-        <p>COMMENT VA MA BOÎTE ?</p>
-      </div>
-
-      <button className="headerAction" type="button" aria-label="Compte utilisateur">
-        <svg viewBox="0 0 24 24" aria-hidden="true" className="accountIcon">
-          <circle cx="12" cy="9" r="3" fill="none" stroke="currentColor" strokeWidth="1.7" />
-          <path d="M6.8 18.2c1.2-2.8 3.8-4.2 5.2-4.2s4 1.4 5.2 4.2" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
-        </svg>
-      </button>
-    </header>
-  )
-}
-
 function Sidebar() {
   const menuItems = [
-    { label: 'Historique', icon: 'history', active: true },
-    { label: 'Informations', icon: 'info', active: false },
-    { label: 'Se réévaluer', icon: 'refresh', active: false },
+    { label: 'Historique', icon: 'history', active: true, href: '/dashboard_user' },
+    { label: 'Informations', icon: 'info', active: false, href: '/account' },
+    { label: 'Se réévaluer', icon: 'refresh', active: false, href: '/evaluate' },
   ]
 
   return (
-    <aside className="sidebar" aria-label="Navigation du tableau de bord">
-      <div className="sidebarProfile">
-        <span className="sidebarAvatar">J</span>
+    <aside className={styles.sidebar} aria-label="Navigation du tableau de bord">
+      <div className={styles.sidebarProfile}>
+        <span className={styles.sidebarAvatar}>J</span>
         <div>
           <strong>Jean Dupont</strong>
           <span>Entreprise</span>
         </div>
       </div>
 
-      <nav className="sidebarNav">
+      <nav className={styles.sidebarNav}>
         {menuItems.map((item) => (
-          <a key={item.label} href="#" className={`navItem ${item.active ? 'active' : ''}`}>
+          <Link key={item.label} href={item.href} className={`${styles.navItem} ${item.active ? styles.active : ''}`}>
             <SidebarIcon type={item.icon} />
             <span>{item.label}</span>
             {item.icon === 'refresh' ? (
-              <svg viewBox="0 0 24 24" aria-hidden="true" className="navIcon navIconRight">
+              <svg viewBox="0 0 24 24" aria-hidden="true" className={`${styles.navIcon} ${styles.navIconRight}`}>
                 <path d="M14.5 6.2a7 7 0 1 0 2.8 9.2" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
                 <path d="M15.2 4.8v4h4" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             ) : null}
-          </a>
+          </Link>
         ))}
       </nav>
     </aside>
@@ -123,20 +99,20 @@ function Sidebar() {
 
 function HistoryCard({ date, score }) {
   return (
-    <article className="historyRow">
-      <div className="historyLeft">
-        <span className="historyBadge">
+    <article className={styles.historyRow}>
+      <div className={styles.historyLeft}>
+        <span className={styles.historyBadge}>
           <CalendarIcon />
         </span>
         <strong>{date}</strong>
       </div>
 
-      <div className="historyScore">
+      <div className={styles.historyScore}>
         <span>SCORE</span>
         <strong>{score}%</strong>
       </div>
 
-      <button className="rowButton" type="button" aria-label={`Consulter le questionnaire du ${date}`}>
+      <button className={styles.rowButton} type="button" aria-label={`Consulter le questionnaire du ${date}`}>
         <ChevronIcon />
       </button>
     </article>
@@ -145,7 +121,7 @@ function HistoryCard({ date, score }) {
 
 function EvolutionChart() {
   return (
-    <svg viewBox="0 0 360 200" role="img" aria-label="Évolution des scores" className="chartSvg">
+    <svg viewBox="0 0 360 200" role="img" aria-label="Évolution des scores" className={styles.chartSvg}>
       <rect x="32" y="24" width="296" height="142" fill="#fff" stroke="rgba(36, 45, 76, 0.18)" />
       <path d="M48 48H310M48 80H310M48 112H310M48 144H310" stroke="rgba(36, 45, 76, 0.08)" strokeDasharray="2 3" />
       <path d="M48 30V166M146 30V166M244 30V166M310 30V166" stroke="rgba(36, 45, 76, 0.08)" strokeDasharray="2 3" />
@@ -176,10 +152,8 @@ function EvolutionChart() {
 
 export default function DashboardUserPage() {
   return (
-    <Layout showTopbar={false}>
+    <Layout>
       <div className={styles.dashboardPage}>
-        <DashboardHeader />
-
         <div className={styles.dashboardBody}>
           <Sidebar />
 
