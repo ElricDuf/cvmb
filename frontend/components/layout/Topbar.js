@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import brandLogo from '../../Logo-CCIBG-bleu_Web 2.png'
 
 export default function Topbar() {
@@ -8,12 +9,12 @@ export default function Topbar() {
           <div className="brand">
             <img src={brandLogo.src} alt="CCI Bordeaux Gironde" className="brandLogo" />
           </div>
-          <button className="accountButton" type="button" aria-label="Connexion">
+          <Link href="/login" className="accountButton" aria-label="Connexion">
             <svg viewBox="0 0 24 24" aria-hidden="true" className="accountIcon">
               <circle cx="12" cy="8" r="3.25" fill="none" stroke="currentColor" strokeWidth="1.8" />
               <path d="M6.5 19.25c1.35-2.9 4-4.5 5.5-4.5s4.15 1.6 5.5 4.5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
             </svg>
-          </button>
+          </Link>
         </div>
       </header>
 
@@ -35,6 +36,10 @@ export default function Topbar() {
           gap: 16px;
         }
 
+        .brand {
+          justify-self: start;
+        }
+
         .brandLogo {
           display: block;
           width: 132px;
@@ -51,11 +56,23 @@ export default function Topbar() {
           display: grid;
           place-items: center;
           cursor: pointer;
+          justify-self: end;
+          text-decoration: none;
         }
 
         .accountIcon {
           width: 22px;
           height: 22px;
+        }
+
+        @media (max-width: 640px) {
+          .topbarInner {
+            padding-inline: 16px;
+          }
+
+          .brandLogo {
+            width: 112px;
+          }
         }
       `}</style>
     </>

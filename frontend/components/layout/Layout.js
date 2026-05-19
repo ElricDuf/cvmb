@@ -1,14 +1,14 @@
 import Topbar from './Topbar'
 import Footer from './Footer'
 
-export default function Layout({ children }) {
+export default function Layout({ children, showTopbar = true, showFooter = true }) {
   return (
     <>
-      <Topbar />
+      {showTopbar ? <Topbar /> : null}
       <main className="layoutMain">
         {children}
       </main>
-      <Footer />
+      {showFooter ? <Footer /> : null}
 
       <style jsx>{`
         :global(html) {

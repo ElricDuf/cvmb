@@ -11,7 +11,7 @@ Quick start
 1. Start PostgreSQL locally with Docker:
 
 ```bash
-docker compose up -d postgres
+podman compose up -d postgres
 ```
 
 2. The backend is already configured to use `postgresql://cvmb:cvmb@localhost:5432/cvmb?schema=public`.

@@ -23,6 +23,8 @@ export default function QuestionnairePage() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [answers, setAnswers] = useState({})
   const [completed, setCompleted] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState('')
 
   const selectedSize = useMemo(() => {
     const value = router.query.size
@@ -137,6 +139,59 @@ export default function QuestionnairePage() {
     }))
   }
 
+  const handleSubmitDiagnostic = async () => {
+    if (!payload || submitting) {
+      return
+    }
+
+    const answerEntries = questions
+      .map((question) => ({
+        questionId: question.id,
+        responseId: answers[question.id],
+      }))
+      .filter((entry) => Boolean(entry.responseId))
+
+    if (answerEntries.length !== questions.length) {
+      setSubmitError('Toutes les questions doivent recevoir une réponse avant de générer le diagnostic.')
+      return
+    }
+
+    setSubmitting(true)
+    setSubmitError('')
+
+    try {
+      const response = await fetch('/api/diagnostics', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          size: selectedSize,
+          sector: selectedSector,
+          answers: answerEntries,
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Impossible de calculer le diagnostic.')
+      }
+
+      window.localStorage.setItem('cvmb:lastDiagnostic', JSON.stringify(data))
+      window.localStorage.setItem('cvmb:lastDiagnosticId', data.id)
+
+      await router.push({
+        pathname: '/diagnostic',
+        query: { diagnosticId: data.id },
+      })
+    } catch (submitDiagnosticError) {
+      setSubmitError(submitDiagnosticError.message || 'Impossible de calculer le diagnostic.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   if (!router.isReady || loading) {
     return (
       <Layout>
@@ -210,9 +265,15 @@ export default function QuestionnairePage() {
           <div className="stateCard completionCard">
             <p className="completionTitle">Questionnaire terminé</p>
             <p>Toutes les questions filtrées pour cette entreprise ont été posées.</p>
-            <button type="button" className="returnButton" onClick={() => router.push('/evaluate')}>
-              Recommencer
-            </button>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 16 }}>
+              <button type="button" className="submitBtn" onClick={handleSubmitDiagnostic} disabled={submitting}>
+                {submitting ? 'Calcul en cours...' : 'Valider'}
+              </button>
+              <button type="button" className="returnButton" onClick={() => router.push('/evaluate')}>
+                Recommencer
+              </button>
+            </div>
+            {submitError ? <p className="submitError">{submitError}</p> : null}
           </div>
         ) : currentQuestion ? (
           <>
@@ -240,9 +301,9 @@ export default function QuestionnairePage() {
                     <input
                       type="radio"
                       name={`question-${currentQuestion.id}`}
-                      value={option.texte}
-                      checked={selectedAnswer === option.texte}
-                      onChange={() => handleAnswerChange(currentQuestion.id, option.texte)}
+                      value={option.id}
+                      checked={Number(selectedAnswer) === option.id}
+                      onChange={() => handleAnswerChange(currentQuestion.id, option.id)}
                     />
                     <span className="radioCustom" />
                     <span className="optionText">{option.texte}</span>
@@ -524,6 +585,13 @@ export default function QuestionnairePage() {
           box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
           padding: 40px;
           color: #5e6274;
+          text-align: center;
+        }
+
+        .submitError {
+          margin-top: 16px;
+          color: #b42318;
+          font-size: 0.95rem;
           text-align: center;
         }
 
