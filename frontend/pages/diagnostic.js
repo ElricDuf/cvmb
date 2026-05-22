@@ -17,6 +17,8 @@ export default function DiagnosticPage() {
   const [diagnostic, setDiagnostic] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [accountSaveState, setAccountSaveState] = useState('idle')
+  const [accountSaveError, setAccountSaveError] = useState('')
 
   const diagnosticId = useMemo(() => {
     const value = router.query.diagnosticId
@@ -86,6 +88,134 @@ export default function DiagnosticPage() {
       cancelled = true
     }
   }, [router.isReady, diagnosticId])
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !router.isReady || !diagnostic) {
+      return
+    }
+
+    const savedSession = window.localStorage.getItem('cvmb:session')
+
+    if (!savedSession) {
+      setAccountSaveState('idle')
+      setAccountSaveError('')
+      return
+    }
+
+    let parsedSession = null
+
+    try {
+      parsedSession = JSON.parse(savedSession)
+    } catch {
+      setAccountSaveState('error')
+      return
+    }
+
+    const userId = parsedSession?.user?.id
+
+    if (!userId) {
+      setAccountSaveState('error')
+      return
+    }
+
+    const sourceDiagnosticId = String(diagnosticId || diagnostic.id || '').trim()
+
+    if (!sourceDiagnosticId) {
+      setAccountSaveState('error')
+      return
+    }
+
+    const alreadyPersistedId = Number(diagnostic.id)
+    const isPersistedId = Number.isInteger(alreadyPersistedId) && alreadyPersistedId > 0
+    const saveMarkerKey = `cvmb:diagnosticSaved:${userId}:${sourceDiagnosticId}`
+
+    if (isPersistedId || window.localStorage.getItem(saveMarkerKey) === '1') {
+      setAccountSaveState('saved')
+      setAccountSaveError('')
+      return
+    }
+
+    let cancelled = false
+
+    async function persistDiagnosticToAccount() {
+      try {
+        setAccountSaveState('saving')
+        setAccountSaveError('')
+
+        let questionnaireContext = null
+
+        try {
+          questionnaireContext = JSON.parse(window.localStorage.getItem('cvmb:questionnaireContext') || 'null')
+        } catch {
+          questionnaireContext = null
+        }
+
+        const response = await fetch(`/api/diagnostics/${encodeURIComponent(sourceDiagnosticId)}/save`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            userId,
+            entrepriseId: parsedSession?.entreprise?.id || parsedSession?.enterprise?.id || null,
+            siret: questionnaireContext?.siret || parsedSession?.entreprise?.siret || parsedSession?.enterprise?.siret || null,
+            diagnostic,
+          }),
+        })
+
+        const rawBody = await response.text()
+        let data = null
+
+        try {
+          data = rawBody ? JSON.parse(rawBody) : null
+        } catch {
+          data = null
+        }
+
+        if (!response.ok || !data?.saved) {
+          if (!cancelled) {
+            const fallbackError = response.status === 404
+              ? 'Endpoint de sauvegarde introuvable. Redémarrez le backend.'
+              : `Erreur HTTP ${response.status}${response.statusText ? ` (${response.statusText})` : ''}.`
+
+            setAccountSaveState('error')
+            setAccountSaveError(data?.error || fallbackError)
+          }
+          return
+        }
+
+        if (cancelled) {
+          return
+        }
+
+        const nextDiagnostic = data?.diagnostic || diagnostic
+
+        window.localStorage.setItem(saveMarkerKey, '1')
+        window.localStorage.setItem(storageKey, JSON.stringify(nextDiagnostic))
+
+        if (nextDiagnostic?.id) {
+          window.localStorage.setItem('cvmb:lastDiagnosticId', String(nextDiagnostic.id))
+          window.localStorage.setItem(`cvmb:diagnosticSaved:${userId}:${nextDiagnostic.id}`, '1')
+        }
+
+        setDiagnostic(nextDiagnostic)
+        setAccountSaveState('saved')
+        setAccountSaveError('')
+      } catch {
+        if (!cancelled) {
+          setAccountSaveState('error')
+          setAccountSaveError('Erreur réseau ou serveur indisponible.')
+        }
+        return
+      }
+    }
+
+    persistDiagnosticToAccount()
+
+    return () => {
+      cancelled = true
+    }
+  }, [router.isReady, diagnostic, diagnosticId])
 
   const globalDifficulty = diagnostic?.global?.difficultyPercentage ?? 0
   const globalTone = diagnostic?.global?.tone || 'red'
@@ -205,6 +335,14 @@ export default function DiagnosticPage() {
         <header className="hero">
           <h1>Diagnostic</h1>
           <p className="subtitle">Résultats calculés à partir des réponses de votre questionnaire.</p>
+          {accountSaveState === 'saving' ? <p className="accountSaveInfo saving">Enregistrement du diagnostic dans votre compte...</p> : null}
+          {accountSaveState === 'saved' ? <p className="accountSaveInfo saved">Diagnostic enregistré dans votre compte.</p> : null}
+          {accountSaveState === 'error' ? (
+            <p className="accountSaveInfo error">
+              Impossible d’enregistrer automatiquement ce diagnostic dans votre compte.
+              {accountSaveError ? ` ${accountSaveError}` : ''}
+            </p>
+          ) : null}
         </header>
 
         {renderContent()}
@@ -281,6 +419,36 @@ export default function DiagnosticPage() {
             margin-top: 12px;
             max-width: 600px;
             margin-inline: auto;
+          }
+
+          .accountSaveInfo {
+            margin: 14px auto 0;
+            width: fit-content;
+            max-width: 100%;
+            padding: 8px 12px;
+            border-radius: 999px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            line-height: 1.2;
+            border: 1px solid transparent;
+          }
+
+          .accountSaveInfo.saving {
+            color: #1d4ed8;
+            background: rgba(37, 99, 235, 0.08);
+            border-color: rgba(37, 99, 235, 0.2);
+          }
+
+          .accountSaveInfo.saved {
+            color: #166534;
+            background: rgba(22, 163, 74, 0.1);
+            border-color: rgba(22, 163, 74, 0.22);
+          }
+
+          .accountSaveInfo.error {
+            color: #b91c1c;
+            background: rgba(239, 68, 68, 0.08);
+            border-color: rgba(239, 68, 68, 0.22);
           }
 
           .topCards {

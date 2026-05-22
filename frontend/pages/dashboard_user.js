@@ -1,20 +1,57 @@
-import Layout from '../components/layout/Layout'
+import { useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/router'
 import Link from 'next/link'
+import Layout from '../components/layout/Layout'
 import styles from '../styles/dashboard_user.module.css'
 
-const historyItems = [
-  { date: '25 octobre 2020', score: 78 },
-  { date: '5 mars 2019', score: 62 },
-  { date: '12 septembre 2018', score: 55 },
-]
+const historyStorageKey = 'cvmb:session'
 
-const chartPoints = [
-  { label: '12 sept. 2018', score: 55, x: 20, y: 150 },
-  { label: '5 mars 2019', score: 62, x: 160, y: 122 },
-  { label: '25 oct. 2020', score: 78, x: 300, y: 72 },
-]
+function formatHistoryDate(value) {
+  if (!value) {
+    return 'Date inconnue'
+  }
 
-const chartPath = 'M44 150 L184 122 L324 72'
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return 'Date inconnue'
+  }
+
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(date)
+}
+
+function buildChartGeometry(items) {
+  if (!items.length) {
+    return { points: [], path: '' }
+  }
+
+  const minX = 44
+  const maxX = 324
+  const minY = 150
+  const maxY = 56
+  const denominator = Math.max(items.length - 1, 1)
+
+  const points = items.map((item, index) => {
+    const x = minX + ((maxX - minX) * index) / denominator
+    const y = minY - ((minY - maxY) * Math.max(0, Math.min(100, item.percentage || 0))) / 100
+
+    return {
+      ...item,
+      x,
+      y,
+    }
+  })
+
+  const path = points
+    .map((point, index) => `${index === 0 ? 'M' : 'L'}${Math.round(point.x)} ${Math.round(point.y)}`)
+    .join(' ')
+
+  return { points, path }
+}
 
 function SidebarIcon({ type }) {
   if (type === 'history') {
@@ -62,7 +99,7 @@ function ChevronIcon() {
   )
 }
 
-function Sidebar() {
+function Sidebar({ profile }) {
   const menuItems = [
     { label: 'Historique', icon: 'history', active: true, href: '/dashboard_user' },
     { label: 'Informations', icon: 'info', active: false, href: '/account' },
@@ -74,8 +111,8 @@ function Sidebar() {
       <div className={styles.sidebarProfile}>
         <span className={styles.sidebarAvatar}>J</span>
         <div>
-          <strong>Jean Dupont</strong>
-          <span>Entreprise</span>
+          <strong>{profile?.name || 'Utilisateur'}</strong>
+          <span>{profile?.company || 'Entreprise'}</span>
         </div>
       </div>
 
@@ -97,42 +134,48 @@ function Sidebar() {
   )
 }
 
-function HistoryCard({ date, score }) {
+function HistoryCard({ date, score, companyName, companySize, scoreLabel, onOpen }) {
   return (
     <article className={styles.historyRow}>
       <div className={styles.historyLeft}>
         <span className={styles.historyBadge}>
           <CalendarIcon />
         </span>
-        <strong>{date}</strong>
+        <div>
+          <strong>{date}</strong>
+          <span style={{ display: 'block', fontSize: '0.8rem', color: '#7c8197', marginTop: '2px' }}>
+            {companyName}
+            {companySize ? ` · ${companySize}` : ''}
+          </span>
+        </div>
       </div>
 
       <div className={styles.historyScore}>
         <span>SCORE</span>
-        <strong>{score}%</strong>
+        <strong>{scoreLabel || `${score}%`}</strong>
       </div>
 
-      <button className={styles.rowButton} type="button" aria-label={`Consulter le questionnaire du ${date}`}>
+      <button className={styles.rowButton} type="button" aria-label={`Consulter le questionnaire du ${date}`} onClick={onOpen}>
         <ChevronIcon />
       </button>
     </article>
   )
 }
 
-function EvolutionChart() {
+function EvolutionChart({ points, path }) {
   return (
     <svg viewBox="0 0 360 200" role="img" aria-label="Évolution des scores" className={styles.chartSvg}>
       <rect x="32" y="24" width="296" height="142" fill="#fff" stroke="rgba(36, 45, 76, 0.18)" />
       <path d="M48 48H310M48 80H310M48 112H310M48 144H310" stroke="rgba(36, 45, 76, 0.08)" strokeDasharray="2 3" />
       <path d="M48 30V166M146 30V166M244 30V166M310 30V166" stroke="rgba(36, 45, 76, 0.08)" strokeDasharray="2 3" />
-      <path d={chartPath} fill="none" stroke="#2547ff" strokeWidth="2.2" />
-      {chartPoints.map((point) => (
+      {path ? <path d={path} fill="none" stroke="#2547ff" strokeWidth="2.2" /> : null}
+      {points.map((point) => (
         <g key={point.label}>
-          <circle cx={point.x + 24} cy={point.y} r="3.2" fill="#2547ff" />
-          <text x={point.x + 24} y={point.y - 8} textAnchor="middle" fontSize="9" fill="#5c6277">
+          <circle cx={point.x} cy={point.y} r="3.2" fill="#2547ff" />
+          <text x={point.x} y={point.y - 8} textAnchor="middle" fontSize="9" fill="#5c6277">
             {point.score}%
           </text>
-          <text x={point.x + 24} y="186" textAnchor="middle" fontSize="8.5" fill="#5c6277">
+          <text x={point.x} y="186" textAnchor="middle" fontSize="8.5" fill="#5c6277">
             {point.label}
           </text>
         </g>
@@ -151,26 +194,184 @@ function EvolutionChart() {
 }
 
 export default function DashboardUserPage() {
+  const router = useRouter()
+  const [session, setSession] = useState(null)
+  const [historyData, setHistoryData] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return
+    }
+
+    const savedSession = window.localStorage.getItem(historyStorageKey)
+
+    if (!savedSession) {
+      setLoading(false)
+      setError('Connectez-vous pour consulter votre historique.')
+      return
+    }
+
+    let parsedSession = null
+
+    try {
+      parsedSession = JSON.parse(savedSession)
+    } catch {
+      window.localStorage.removeItem(historyStorageKey)
+      setLoading(false)
+      setError('Votre session est invalide. Reconnectez-vous.')
+      return
+    }
+
+    setSession(parsedSession)
+
+    if (parsedSession?.mustChangePassword) {
+      setLoading(false)
+      router.replace('/account?firstLogin=1')
+      return
+    }
+
+    if (!parsedSession?.user?.id) {
+      setLoading(false)
+      setError('Votre session est incomplète. Reconnectez-vous.')
+      return
+    }
+
+    let cancelled = false
+
+    async function loadHistory() {
+      setLoading(true)
+      setError('')
+
+      try {
+        const response = await fetch(`/api/users/${parsedSession.user.id}/questionnaires`)
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Impossible de charger l’historique.')
+        }
+
+        if (!cancelled) {
+          setHistoryData(Array.isArray(data.questionnaires) ? data.questionnaires : [])
+        }
+      } catch (loadError) {
+        if (!cancelled) {
+          setError(loadError.message || 'Impossible de charger l’historique.')
+          setHistoryData([])
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false)
+        }
+      }
+    }
+
+    loadHistory()
+
+    const handleFocus = () => {
+      if (!cancelled) {
+        loadHistory()
+      }
+    }
+
+    const handleStorage = (event) => {
+      if (event.key === 'cvmb:session' || event.key === 'cvmb:lastDiagnosticId') {
+        setSessionFromStorage()
+      }
+    }
+
+    function setSessionFromStorage() {
+      const latestSession = window.localStorage.getItem(historyStorageKey)
+
+      if (!latestSession) {
+        return
+      }
+
+      try {
+        const nextSession = JSON.parse(latestSession)
+        setSession(nextSession)
+      } catch {
+        return
+      }
+    }
+
+    window.addEventListener('focus', handleFocus)
+    window.addEventListener('storage', handleStorage)
+
+    return () => {
+      cancelled = true
+      window.removeEventListener('focus', handleFocus)
+      window.removeEventListener('storage', handleStorage)
+    }
+  }, [])
+
+  const profile = useMemo(() => {
+    const user = session?.user || {}
+    const name = [user.prenom, user.nom].filter(Boolean).join(' ').trim()
+
+    return {
+      name: name || user.email || 'Utilisateur',
+      company: session?.entreprise?.raisonSociale || session?.enterprise?.raisonSociale || 'Entreprise',
+    }
+  }, [session])
+
+  const chartData = useMemo(() => {
+    return buildChartGeometry(
+      historyData
+        .slice()
+        .reverse()
+        .map((item) => ({
+          label: formatHistoryDate(item.createdAt),
+          score: item.percentage || 0,
+          percentage: item.percentage || 0,
+        })),
+    )
+  }, [historyData])
+
+  const handleOpenQuestionnaire = (diagnosticId) => {
+    router.push({
+      pathname: '/diagnostic',
+      query: { diagnosticId },
+    })
+  }
+
   return (
     <Layout>
       <div className={styles.dashboardPage}>
         <div className={styles.dashboardBody}>
-          <Sidebar />
+          <Sidebar profile={profile} />
 
           <main className={styles.contentArea}>
             <section className={`${styles.panel} ${styles.historyPanel}`}>
               <h1>Historique de questionnaire</h1>
-              <div className={styles.historyList}>
-                {historyItems.map((item) => (
-                  <HistoryCard key={item.date} {...item} />
-                ))}
-              </div>
+              {loading ? (
+                <p>Chargement de votre historique...</p>
+              ) : error ? (
+                <p>{error}</p>
+              ) : historyData.length ? (
+                <div className={styles.historyList}>
+                  {historyData.map((item) => (
+                    <HistoryCard
+                      key={item.id}
+                      date={formatHistoryDate(item.createdAt)}
+                      score={item.percentage}
+                      scoreLabel={`${item.percentage}%`}
+                      companyName={item.company?.name || 'Entreprise'}
+                      companySize={item.company?.size || ''}
+                      onOpen={() => handleOpenQuestionnaire(item.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p>Aucun questionnaire terminé n’a encore été enregistré pour ce compte.</p>
+              )}
             </section>
 
             <section className={`${styles.panel} ${styles.evolutionPanel}`}>
               <h2>Evolution</h2>
               <div className={styles.chartWrap}>
-                <EvolutionChart />
+                {chartData.points.length ? <EvolutionChart points={chartData.points} path={chartData.path} /> : <p>Aucune évolution disponible pour le moment.</p>}
               </div>
             </section>
           </main>

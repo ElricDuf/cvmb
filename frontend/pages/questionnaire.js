@@ -159,6 +159,28 @@ export default function QuestionnairePage() {
     setSubmitting(true)
     setSubmitError('')
 
+    let savedSession = null
+
+    if (typeof window !== 'undefined') {
+      try {
+        savedSession = JSON.parse(window.localStorage.getItem('cvmb:session') || 'null')
+      } catch {
+        savedSession = null
+      }
+    }
+
+    const userId = savedSession?.user?.id || null
+    const entrepriseId = savedSession?.entreprise?.id || savedSession?.enterprise?.id || null
+    let questionnaireContext = null
+
+    if (typeof window !== 'undefined') {
+      try {
+        questionnaireContext = JSON.parse(window.localStorage.getItem('cvmb:questionnaireContext') || 'null')
+      } catch {
+        questionnaireContext = null
+      }
+    }
+
     try {
       const response = await fetch('/api/diagnostics', {
         method: 'POST',
@@ -168,6 +190,9 @@ export default function QuestionnairePage() {
         body: JSON.stringify({
           size: selectedSize,
           sector: selectedSector,
+          userId,
+          entrepriseId,
+          siret: questionnaireContext?.siret || null,
           answers: answerEntries,
         }),
       })

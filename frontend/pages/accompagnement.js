@@ -1,34 +1,83 @@
 import { useState } from 'react'
+import { useRouter } from 'next/router'
 import Layout from '../components/layout/Layout'
 
-const initialCredentials = {
-  identifier: '72aa8bfa81a14233819e73d035fc426a',
-  password: 'JKHjAg',
-}
-
-function CopyIcon() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="copyIcon">
-      <rect x="8.2" y="8.2" width="8.8" height="8.8" rx="1.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
-      <path d="M6.2 15.8H5.4c-.9 0-1.6-.7-1.6-1.6V6.2c0-.9.7-1.6 1.6-1.6h8c.9 0 1.6.7 1.6 1.6V7" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  )
-}
-
 export default function AccompagnementPage() {
-  const [copiedField, setCopiedField] = useState('')
+  const router = useRouter()
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    alert('Demande d\'accompagnement envoyée (simulation)')
-  }
 
-  const copyValue = async (value, fieldName) => {
+    const form = event.currentTarget
+
+    if (!form.reportValidity()) {
+      return
+    }
+
+    const diagnosticPayloadRaw = window.localStorage.getItem('cvmb:lastDiagnostic')
+
+    if (!diagnosticPayloadRaw) {
+      setError('Votre diagnostic est manquant. Relancez le questionnaire avant de valider la demande.')
+      return
+    }
+
+    let diagnosticPayload = null
+
     try {
-      await navigator.clipboard.writeText(value)
-      setCopiedField(fieldName)
+      diagnosticPayload = JSON.parse(diagnosticPayloadRaw)
     } catch {
-      setCopiedField('')
+      setError('Le diagnostic enregistré est invalide. Relancez le questionnaire avant de valider la demande.')
+      return
+    }
+
+    setSubmitting(true)
+    setError('')
+
+    try {
+      const formData = new FormData(form)
+      const payload = {
+        companyName: formData.get('companyName'),
+        managerName: formData.get('managerName'),
+        phone: formData.get('phone'),
+        workforce: formData.get('workforce'),
+        creationYear: formData.get('creationYear'),
+        email: formData.get('email'),
+        city: formData.get('city'),
+        siret: formData.get('siret'),
+        contactRequested: formData.get('contactRequested') === 'on',
+        diagnostic: diagnosticPayload,
+      }
+
+      const response = await fetch('/api/accompagnement/submit', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Impossible de valider la demande d\'accompagnement.')
+      }
+
+      window.localStorage.setItem('cvmb:lastAccount', JSON.stringify(data.user))
+      window.localStorage.setItem(
+        'cvmb:session',
+        JSON.stringify({
+          user: data.user,
+          entreprise: data.entreprise || null,
+          mustChangePassword: Boolean(data.user?.mustChangePassword),
+        }),
+      )
+      await router.push('/dashboard_user')
+    } catch (submitError) {
+      setError(submitError.message || 'Impossible de valider la demande d\'accompagnement.')
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -43,7 +92,7 @@ export default function AccompagnementPage() {
         <section className="formCard" aria-labelledby="accompagnement-title">
           <form onSubmit={handleSubmit} className="requestForm" id="accompagnement-title">
             <label className="contactToggle">
-              <input type="checkbox" defaultChecked />
+              <input type="checkbox" name="contactRequested" defaultChecked />
               <span>Souhaitez-vous être contacté par un conseiller de votre CCI ?</span>
             </label>
 
@@ -115,38 +164,16 @@ export default function AccompagnementPage() {
               <div className="credentialsIntro">
                 <span className="infoIcon" aria-hidden="true">i</span>
                 <p>
-                  Nous vous avons créé un espace personnel. Cet espace vous sera accessible avec l&apos;identifiant et mot de passe ci-dessous. Vous pourrez, une fois connecté, changer ces valeurs.
+                  La validation crée votre compte, relie votre diagnostic à votre entreprise et vous demandera de définir votre mot de passe à la première arrivée dans votre espace.
                 </p>
-              </div>
-
-              <div className="credentialsGrid">
-                <label>
-                  IDENTIFIANT
-                  <div className="readonlyField">
-                    <input type="text" value={initialCredentials.identifier} readOnly aria-readonly="true" />
-                    <button type="button" className="copyButton" onClick={() => copyValue(initialCredentials.identifier, 'identifier')} aria-label="Copier l'identifiant">
-                      <CopyIcon />
-                    </button>
-                  </div>
-                  {copiedField === 'identifier' ? <span className="copyHint">Identifiant copié</span> : null}
-                </label>
-
-                <label>
-                  MOT DE PASSE
-                  <div className="readonlyField">
-                    <input type="text" value={initialCredentials.password} readOnly aria-readonly="true" />
-                    <button type="button" className="copyButton" onClick={() => copyValue(initialCredentials.password, 'password')} aria-label="Copier le mot de passe">
-                      <CopyIcon />
-                    </button>
-                  </div>
-                  {copiedField === 'password' ? <span className="copyHint">Mot de passe copié</span> : null}
-                </label>
               </div>
             </div>
 
+            {error ? <p className="formError" role="alert">{error}</p> : null}
+
             <div className="actions">
-              <button type="submit" className="submitButton">
-                VALIDER
+              <button type="submit" className="submitButton" disabled={submitting}>
+                {submitting ? 'VALIDATION EN COURS...' : 'VALIDER'}
               </button>
             </div>
           </form>
@@ -218,8 +245,7 @@ export default function AccompagnementPage() {
           gap: 18px 20px;
         }
 
-        .fieldsGrid label,
-        .credentialsGrid label {
+        .fieldsGrid label {
           display: flex;
           flex-direction: column;
           gap: 7px;
@@ -292,53 +318,11 @@ export default function AccompagnementPage() {
           margin-top: 2px;
         }
 
-        .credentialsGrid {
-          display: grid;
-          grid-template-columns: repeat(2, minmax(0, 1fr));
-          gap: 16px;
-        }
-
-        .readonlyField {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-          background: #ffffff;
-          border-radius: 2px;
-          padding-right: 10px;
-        }
-
-        .readonlyField input {
-          flex: 1;
-          height: 42px;
-          border: 0;
-          background: transparent;
-          padding: 0 12px;
-          font: inherit;
-          color: #2c2f3a;
-          outline: none;
-        }
-
-        .copyButton {
-          width: 30px;
-          height: 30px;
-          border: 0;
-          border-radius: 8px;
-          background: transparent;
-          color: #3444f4;
-          display: grid;
-          place-items: center;
-          cursor: pointer;
-        }
-
-        .copyIcon {
-          width: 16px;
-          height: 16px;
-        }
-
-        .copyHint {
-          color: #3444f4;
-          font-size: 0.74rem;
-          font-weight: 700;
+        .formError {
+          margin: 0;
+          color: #b42318;
+          font-size: 0.92rem;
+          font-weight: 600;
         }
 
         .actions {
@@ -362,6 +346,11 @@ export default function AccompagnementPage() {
           cursor: pointer;
         }
 
+        .submitButton:disabled {
+          opacity: 0.72;
+          cursor: progress;
+        }
+
         .submitButton:hover {
           filter: brightness(1.04);
         }
@@ -376,8 +365,7 @@ export default function AccompagnementPage() {
             border-radius: 24px;
           }
 
-          .fieldsGrid,
-          .credentialsGrid {
+          .fieldsGrid {
             grid-template-columns: 1fr;
           }
 

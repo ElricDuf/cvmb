@@ -40,6 +40,7 @@ model Utilisateur {
   role               String    @db.VarChar(30) // dirigeant | conseiller | admin_local | admin_national
   cci_id             Int?      // NULL pour les dirigeants
   actif              Boolean   @default(true)
+  doit_modifier_mot_de_passe Boolean @default(true)
   derniere_connexion DateTime?
   cree_le            DateTime  @default(now())
 
@@ -56,9 +57,13 @@ model Entreprise {
   siret            String?   @unique @db.VarChar(14)
   raison_sociale   String?   @db.VarChar(255)
   code_postal      String?   @db.VarChar(10) // AJOUT: Issu API Sirene, sert au routage vers la CCI locale
+  ville            String?   @db.VarChar(120)
   secteur          String?   @db.VarChar(50) // artisanat | commerce | profession_liberale | industrie | prestataire_services
   taille           String?   @db.VarChar(10) // TPE | PME
   effectif         Int?
+  effectif_texte   String?   @db.VarChar(50)
+  annee_creation   Int?
+  demande_contact  Boolean   @default(true)
   chiffre_affaires Decimal?  @db.Decimal(15, 2)
   resultat_net     Decimal?  @db.Decimal(15, 2)
   cci_id           Int

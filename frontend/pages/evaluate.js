@@ -124,6 +124,21 @@ export default function EvaluatePage() {
 
   const handleSubmit = (event) => {
     event.preventDefault()
+
+    const formData = new FormData(event.currentTarget)
+    const siret = String(formData.get('siret') || '').trim().replace(/\D/g, '')
+
+    if (typeof window !== 'undefined') {
+      window.localStorage.setItem(
+        'cvmb:questionnaireContext',
+        JSON.stringify({
+          siret,
+          size: companySize,
+          sector: selectedSector,
+        }),
+      )
+    }
+
     router.push({
       pathname: '/questionnaire',
       query: {

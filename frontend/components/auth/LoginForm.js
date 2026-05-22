@@ -44,10 +44,54 @@ function ProfileMark() {
 export default function LoginForm() {
   const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
+  const [error, setError] = useState('')
+  const [submitting, setSubmitting] = useState(false)
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
-    router.push('/dashboard_user')
+
+    const form = event.currentTarget
+    const formData = new FormData(form)
+
+    const identifier = String(formData.get('identifier') || '').trim()
+    const password = String(formData.get('password') || '').trim()
+
+    if (!identifier || !password) {
+      setError('Identifiant et mot de passe sont requis.')
+      return
+    }
+
+    setSubmitting(true)
+    setError('')
+
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ identifier, password }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Connexion impossible.')
+      }
+
+      window.localStorage.setItem('cvmb:session', JSON.stringify(data))
+
+      if (data.mustChangePassword) {
+        await router.push('/account?firstLogin=1')
+        return
+      }
+
+      await router.push('/dashboard_user')
+    } catch (submitError) {
+      setError(submitError.message || 'Connexion impossible.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -105,8 +149,10 @@ export default function LoginForm() {
         </label>
 
         <button className="submitButton" type="submit">
-          SE CONNECTER
+          {submitting ? 'CONNEXION...' : 'SE CONNECTER'}
         </button>
+
+        {error ? <p className="formError" role="alert">{error}</p> : null}
       </form>
 
       <style jsx>{`
@@ -307,6 +353,19 @@ export default function LoginForm() {
           letter-spacing: 0.04em;
           box-shadow: 0 14px 24px rgba(49, 70, 245, 0.3);
           cursor: pointer;
+        }
+
+        .submitButton:disabled {
+          opacity: 0.72;
+          cursor: progress;
+        }
+
+        .formError {
+          margin: 14px 0 0;
+          color: #b42318;
+          font-size: 0.86rem;
+          font-weight: 600;
+          text-align: left;
         }
 
         @media (max-width: 640px) {
