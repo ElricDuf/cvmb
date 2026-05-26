@@ -3,6 +3,19 @@ import { useRouter } from 'next/router'
 import { useEffect, useMemo, useState } from 'react'
 import Layout from '../components/layout/Layout'
 
+const sectorLabels = {
+  commerce: 'Commerce',
+  artisan: 'Artisanat',
+  liberal: 'Professions liberales',
+  industrial: 'Industrie',
+  services: 'Services',
+}
+
+const sizeLabels = {
+  TPE: 'TPE',
+  PME: 'PME',
+}
+
 const storageKey = 'cvmb:lastDiagnostic'
 
 function getBadgeClass(tone) {
@@ -307,6 +320,13 @@ export default function DiagnosticPage() {
               Score global de {diagnostic.global?.score ?? 0} / {diagnostic.global?.scoreMax ?? 0} points, soit {globalScore}% de maîtrise.
             </p>
             <p>{diagnostic.global?.description || 'Les réponses renseignées permettent de produire un diagnostic cohérent.'}</p>
+            {diagnostic.global?.advice ? <p className="adviceText">Conseil personnalisé: {diagnostic.global.advice}</p> : null}
+            {(diagnostic?.filters?.size || diagnostic?.filters?.sector) ? (
+              <div className="contextChips" aria-label="Contexte du diagnostic">
+                {diagnostic?.filters?.size ? <span className="contextChip">Taille: {sizeLabels[diagnostic.filters.size] || diagnostic.filters.size}</span> : null}
+                {diagnostic?.filters?.sector ? <span className="contextChip">Secteur: {sectorLabels[diagnostic.filters.sector] || diagnostic.filters.sector}</span> : null}
+              </div>
+            ) : null}
           </div>
         </section>
 
@@ -318,6 +338,7 @@ export default function DiagnosticPage() {
                 <span className={`badge ${getBadgeClass(category.tone)}`}>Difficulté : {category.difficultyPercentage}%</span>
               </header>
               <p>{category.description}</p>
+              {category.advice ? <p className="categoryAdvice">Conseil: {category.advice}</p> : null}
               <div className="pillarMeta">
                 <span>{category.score} / {category.scoreMax} points</span>
                 <span>{category.percentage}% de maîtrise</span>
@@ -575,6 +596,35 @@ export default function DiagnosticPage() {
             font-size: 1.75rem;
           }
 
+          .adviceText {
+            margin-top: 12px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid #dbeafe;
+            background: #f8fbff;
+            color: #334155;
+            font-weight: 500;
+          }
+
+          .contextChips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 12px;
+          }
+
+          .contextChip {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 999px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #1e40af;
+            background: #eff6ff;
+            border: 1px solid #dbeafe;
+          }
+
           .pillarsGrid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -618,6 +668,15 @@ export default function DiagnosticPage() {
             border-top: 1px solid #eef2f7;
             font-size: 0.9rem;
             color: var(--text-muted);
+          }
+
+          .categoryAdvice {
+            margin-top: 10px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            background: #f8fafc;
+            color: #334155;
           }
 
           .badge {

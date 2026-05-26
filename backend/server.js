@@ -20,6 +20,62 @@ const sectorAliases = {
   services: 'services',
 }
 
+const sectorLabels = {
+  commerce: 'commerce',
+  artisan: 'artisanat',
+  liberal: 'professions liberales',
+  industrial: 'industrie',
+  services: 'services',
+}
+
+const sizeLabels = {
+  TPE: 'TPE',
+  PME: 'PME',
+}
+
+const categoryAdviceTemplates = {
+  1: {
+    fallback: 'formalisez les processus administratifs et fiabilisez les donnees comptables de pilotage.',
+    sector: {
+      commerce: 'fiabilisez les routines de rapprochement caisse, banque et stocks.',
+      artisan: 'securisez le suivi devis-factures et la tracabilite des avances de chantier.',
+      liberal: 'renforcez la gestion documentaire et les obligations de confidentialite.',
+      industrial: 'cadrez les controles administratifs de production et les clotures periodiques.',
+      services: 'standardisez les contrats, devis et validations de prestation.',
+    },
+  },
+  2: {
+    fallback: 'mettez en place un suivi de tresorerie hebdomadaire et des alertes sur les echeances critiques.',
+    sector: {
+      commerce: 'pilotez la marge et la rotation des stocks pour limiter la tension de tresorerie.',
+      artisan: 'securisez les acomptes, les delais de facturation et les relances de fin de chantier.',
+      liberal: 'stabilisez les encaissements et planifiez les charges fiscales/sociales.',
+      industrial: 'suivez le besoin en fonds de roulement et negociez les conditions fournisseurs.',
+      services: 'cadrez les conditions de paiement et automatisez les relances d impayes.',
+    },
+  },
+  3: {
+    fallback: 'structurez l acquisition et le suivi de la performance commerciale avec des indicateurs simples.',
+    sector: {
+      commerce: 'renforcez la visibilite omnicanale et le pilotage des campagnes locales.',
+      artisan: 'ameliorez la prise de rendez-vous en ligne et la valorisation des realisations.',
+      liberal: 'developpez la visibilite d expertise et la qualite du parcours de prise de contact.',
+      industrial: 'soutenez le developpement commercial par des outils de suivi des leads B2B.',
+      services: 'clarifiez l offre, les preuves de valeur et la conversion des demandes entrantes.',
+    },
+  },
+  4: {
+    fallback: 'stabilisez la relation clients-fournisseurs avec des engagements, delais et points de controle partages.',
+    sector: {
+      commerce: 'securisez les approvisionnements et le suivi de satisfaction apres-vente.',
+      artisan: 'formalisez les attentes clients et les jalons de validation des travaux.',
+      liberal: 'renforcez la communication client et la coordination avec les partenaires externes.',
+      industrial: 'fiabilisez la chaine fournisseurs et la gestion des non-conformites.',
+      services: 'cadrez la qualite de service avec des SLA, des revues et des plans d amelioration.',
+    },
+  },
+}
+
 const diagnosticCache = new Map()
 
 function normalizeRequiredString(value) {
@@ -168,6 +224,7 @@ async function persistDiagnosticSnapshot(entrepriseId, diagnostic) {
       difficultyPercentage: Number(global.difficultyPercentage) || 0,
       title: global.title || null,
       description: global.description || null,
+      advice: global.advice || null,
       tone: global.tone || null,
     },
     categories: categories.map((category) => ({
@@ -180,6 +237,7 @@ async function persistDiagnosticSnapshot(entrepriseId, diagnostic) {
       difficultyPercentage: Number(category.difficultyPercentage) || 0,
       title: category.title || null,
       description: category.description || null,
+      advice: category.advice || null,
       tone: category.tone || null,
     })),
     answers: answers.map((answer) => ({
@@ -298,35 +356,229 @@ function clampPercentage(value) {
   return Math.min(100, Math.max(0, Math.round(value)))
 }
 
-function getDiagnosticNarrative(difficultyPercentage) {
+function getDifficultyProfile(difficultyPercentage) {
   if (difficultyPercentage >= 75) {
     return {
-      title: 'Signes de fragilité critique',
-      description: 'Les réponses indiquent plusieurs fragilités importantes sur ce périmètre.',
+      band: 'critical',
+      title: 'Signes de fragilite critique',
       tone: 'red',
+      summary: 'plusieurs fragilites importantes sont presentes et necessitent une action prioritaire',
     }
   }
 
   if (difficultyPercentage >= 50) {
     return {
-      title: 'Vigilance renforcée',
-      description: 'Des points de vigilance apparaissent et méritent d’être traités rapidement.',
+      band: 'warning',
+      title: 'Vigilance renforcee',
       tone: 'orange',
+      summary: 'des points de vigilance sont identifies et doivent etre traites rapidement',
     }
   }
 
   if (difficultyPercentage >= 25) {
     return {
-      title: 'Situation intermédiaire',
-      description: 'La situation est contrastée, avec des marges de progression nettes.',
+      band: 'intermediate',
+      title: 'Situation intermediaire',
       tone: 'green',
+      summary: 'la situation est contrastee avec de vraies marges de progression',
     }
   }
 
   return {
+    band: 'stable',
     title: 'Situation stable',
-    description: 'Les réponses saisies montrent un niveau de maîtrise satisfaisant.',
     tone: 'blue',
+    summary: 'le niveau de maitrise est satisfaisant',
+  }
+}
+
+function buildContextPrefix(size, sector) {
+  const sizeLabel = sizeLabels[size] || size
+  const sectorLabel = sectorLabels[sector] || sector
+
+  if (!sizeLabel && !sectorLabel) {
+    return ''
+  }
+
+  if (sizeLabel && sectorLabel) {
+    return `Pour une ${sizeLabel} du secteur ${sectorLabel}, `
+  }
+
+  if (sizeLabel) {
+    return `Pour une ${sizeLabel}, `
+  }
+
+  return `Pour le secteur ${sectorLabel}, `
+}
+
+function buildGlobalAdvice(profile, size, sector) {
+  const sectorAdvice = {
+    commerce: 'Priorisez le suivi de marge par produit et la maitrise des stocks.',
+    artisan: 'Priorisez le pilotage des devis, acomptes et encaissements de chantier.',
+    liberal: 'Priorisez la regularite de facturation et la planification de charge.',
+    industrial: 'Priorisez le suivi du BFR et des cycles achats-production-livraison.',
+    services: 'Priorisez la securisation des contrats et le recouvrement des impayes.',
+  }
+
+  const sizeAdvice = {
+    TPE: 'Concentrez-vous sur 1 a 2 actions simples, mesurables et deployables rapidement.',
+    PME: 'Nommez un pilote par axe, avec indicateurs de suivi mensuels et revues d equipe.',
+  }
+
+  const bandAction = {
+    critical: 'Commencez par un plan de stabilisation immediat et hebdomadaire.',
+    warning: 'Mettez en place un plan d actions priorise avec jalons sur 90 jours.',
+    intermediate: 'Transformez les points encore fragiles en standards de fonctionnement.',
+    stable: 'Capitalisez sur vos acquis et formalisez un plan de prevention des risques.',
+  }
+
+  return [bandAction[profile.band], sectorAdvice[sector] || null, sizeAdvice[size] || null]
+    .filter(Boolean)
+    .join(' ')
+}
+
+function resolveCategoryTemplate(categoryId, categoryName) {
+  if (categoryAdviceTemplates[categoryId]) {
+    return categoryAdviceTemplates[categoryId]
+  }
+
+  const normalizedName = String(categoryName || '').toLowerCase()
+
+  if (normalizedName.includes('administrative') || normalizedName.includes('comptable')) {
+    return categoryAdviceTemplates[1]
+  }
+
+  if (normalizedName.includes('tresorerie') || normalizedName.includes('bancaire')) {
+    return categoryAdviceTemplates[2]
+  }
+
+  if (normalizedName.includes('commerciale') || normalizedName.includes('digitale')) {
+    return categoryAdviceTemplates[3]
+  }
+
+  if (normalizedName.includes('clients') || normalizedName.includes('fournisseurs')) {
+    return categoryAdviceTemplates[4]
+  }
+
+  return {
+    fallback: 'definissez des objectifs clairs, un responsable et des indicateurs de suivi concrets.',
+    sector: {},
+  }
+}
+
+function buildCategoryAdvice(profile, { categoryId, categoryName, size, sector }) {
+  const template = resolveCategoryTemplate(categoryId, categoryName)
+  const coreAdvice = template.sector[sector] || template.fallback
+
+  const urgencyPrefix = {
+    critical: 'Action prioritaire:',
+    warning: 'Action recommandee:',
+    intermediate: 'Action de consolidation:',
+    stable: 'Action preventive:',
+  }
+
+  const sizeAdjustment = {
+    TPE: 'Gardez un plan court, avec des responsabilites explicites meme si elles sont portees par le dirigeant.',
+    PME: 'Documentez le plan et partagez-le avec les responsables concernes pour execution.',
+  }
+
+  return `${urgencyPrefix[profile.band]} ${coreAdvice} ${sizeAdjustment[size] || ''}`.trim()
+}
+
+function getDiagnosticNarrative(difficultyPercentage, options = {}) {
+  const { size, sector, categoryId = null, categoryName = null } = options
+  const profile = getDifficultyProfile(difficultyPercentage)
+  const contextPrefix = buildContextPrefix(size, sector)
+
+  const description = categoryName
+    ? `${contextPrefix}${profile.summary} sur le volet ${categoryName}.`
+    : `${contextPrefix}${profile.summary} a l echelle globale de l entreprise.`
+
+  const advice = categoryName
+    ? buildCategoryAdvice(profile, { categoryId, categoryName, size, sector })
+    : buildGlobalAdvice(profile, size, sector)
+
+  return {
+    title: profile.title,
+    description,
+    advice,
+    tone: profile.tone,
+  }
+}
+
+async function loadRecommendationMessages({ size, sector, categoryIds = [] }) {
+  const normalizedCategoryIds = Array.from(new Set((categoryIds || []).map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0)))
+
+  return prisma.messageRecommandation.findMany({
+    where: {
+      AND: [
+        { OR: [{ secteur: null }, { secteur: sector }] },
+        { OR: [{ taille: null }, { taille: size }] },
+        normalizedCategoryIds.length > 0
+          ? { OR: [{ categorie_id: null }, { categorie_id: { in: normalizedCategoryIds } }] }
+          : { categorie_id: null },
+      ],
+    },
+    orderBy: [{ score_min: 'asc' }, { score_max: 'asc' }, { id: 'asc' }],
+  })
+}
+
+function selectBestRecommendation(messages, { score, size, sector, categoryId = null }) {
+  const normalizedScore = clampPercentage(Number(score) || 0)
+
+  const scoped = (messages || []).filter((item) => {
+    const sameCategory = categoryId === null
+      ? item.categorie_id === null
+      : item.categorie_id === categoryId
+
+    if (!sameCategory) {
+      return false
+    }
+
+    const min = Number(item.score_min)
+    const max = Number(item.score_max)
+
+    return normalizedScore >= min && normalizedScore <= max
+  })
+
+  if (!scoped.length) {
+    return null
+  }
+
+  const scoreSpecificity = (item) => {
+    let value = 0
+    if (item.secteur && item.secteur === sector) value += 2
+    if (item.taille && item.taille === size) value += 1
+    return value
+  }
+
+  return scoped
+    .sort((left, right) => {
+      const specificityDiff = scoreSpecificity(right) - scoreSpecificity(left)
+      if (specificityDiff !== 0) {
+        return specificityDiff
+      }
+
+      const leftRange = Number(left.score_max) - Number(left.score_min)
+      const rightRange = Number(right.score_max) - Number(right.score_min)
+      if (leftRange !== rightRange) {
+        return leftRange - rightRange
+      }
+
+      return Number(right.id) - Number(left.id)
+    })[0]
+}
+
+function applyRecommendationToNarrative(narrative, recommendation) {
+  if (!recommendation) {
+    return narrative
+  }
+
+  return {
+    ...narrative,
+    title: normalizeRequiredString(recommendation.titre) || narrative.title,
+    description: normalizeRequiredString(recommendation.message) || narrative.description,
+    advice: normalizeRequiredString(recommendation.orientation) || narrative.advice,
   }
 }
 
@@ -415,7 +667,7 @@ async function resolveEntrepriseForDiagnostic({ entrepriseId, userId, siret, siz
           raison_sociale: sireneCompany?.raisonSociale || `${utilisateur.prenom || 'Entreprise'} ${utilisateur.nom || ''}`.trim(),
           code_postal: sireneCompany?.codePostal || null,
           ville: sireneCompany?.ville || null,
-          secteur,
+          secteur: sector,
           taille: size,
           effectif: null,
           effectif_texte: null,
@@ -428,7 +680,7 @@ async function resolveEntrepriseForDiagnostic({ entrepriseId, userId, siret, siz
           raison_sociale: sireneCompany?.raisonSociale || `${splitName.firstName || 'Entreprise'} ${splitName.lastName || ''}`.trim(),
           code_postal: sireneCompany?.codePostal || null,
           ville: sireneCompany?.ville || null,
-          secteur,
+          secteur: sector,
           taille: size,
           mis_a_jour_le: new Date(),
         },
@@ -590,14 +842,37 @@ app.post('/api/diagnostics', async (req, res, next) => {
 
     const globalPercentage = globalMaxScore > 0 ? clampPercentage((globalScore / globalMaxScore) * 100) : 0
     const globalDifficulty = 100 - globalPercentage
-    const globalNarrative = getDiagnosticNarrative(globalDifficulty)
+    const categoryIds = Array.from(categoryResults.keys())
+    const recommendationMessages = await loadRecommendationMessages({ size, sector, categoryIds })
+    const globalNarrative = applyRecommendationToNarrative(
+      getDiagnosticNarrative(globalDifficulty, { size, sector }),
+      selectBestRecommendation(recommendationMessages, {
+        score: globalPercentage,
+        size,
+        sector,
+        categoryId: null,
+      }),
+    )
 
     const categories = Array.from(categoryResults.values())
       .sort((left, right) => left.ordre - right.ordre)
       .map((category) => {
         const percentage = category.scoreMax > 0 ? clampPercentage((category.score / category.scoreMax) * 100) : 0
         const difficultyPercentage = 100 - percentage
-        const narrative = getDiagnosticNarrative(difficultyPercentage)
+        const narrative = applyRecommendationToNarrative(
+          getDiagnosticNarrative(difficultyPercentage, {
+            size,
+            sector,
+            categoryId: category.id,
+            categoryName: category.nom,
+          }),
+          selectBestRecommendation(recommendationMessages, {
+            score: percentage,
+            size,
+            sector,
+            categoryId: category.id,
+          }),
+        )
 
         return {
           id: category.id,
@@ -609,6 +884,7 @@ app.post('/api/diagnostics', async (req, res, next) => {
           difficultyPercentage,
           title: narrative.title,
           description: narrative.description,
+          advice: narrative.advice,
           tone: narrative.tone,
         }
       })
@@ -624,6 +900,7 @@ app.post('/api/diagnostics', async (req, res, next) => {
         difficultyPercentage: globalDifficulty,
         title: globalNarrative.title,
         description: globalNarrative.description,
+        advice: globalNarrative.advice,
         tone: globalNarrative.tone,
       },
       categories,
@@ -723,26 +1000,73 @@ app.get('/api/diagnostics/:diagnosticId', async (req, res, next) => {
     if (Number.isInteger(numericId) && numericId > 0) {
       const record = await prisma.diagnostic.findUnique({
         where: { id: numericId },
-        include: { reponses: true, scores_categories: true },
+        include: {
+          entreprise: true,
+          reponses: true,
+          scores_categories: {
+            include: {
+              categorie: true,
+            },
+          },
+        },
       })
 
       if (!record) {
         return res.status(404).json({ error: 'Diagnostic not found' })
       }
 
+      const size = normalizeCompanySize(record.entreprise?.taille)
+      const sector = normalizeSector(record.entreprise?.secteur)
+      const totalScoreMax = record.scores_categories.reduce((sum, item) => sum + (item.score_max || 0), 0)
+      const globalPercentage = totalScoreMax > 0 ? clampPercentage(((record.score_global || 0) / totalScoreMax) * 100) : 0
+      const globalDifficulty = 100 - globalPercentage
+      const categoryIds = record.scores_categories.map((item) => item.categorie_id)
+      const recommendationMessages = await loadRecommendationMessages({ size, sector, categoryIds })
+      const globalNarrative = applyRecommendationToNarrative(
+        getDiagnosticNarrative(globalDifficulty, { size, sector }),
+        selectBestRecommendation(recommendationMessages, {
+          score: globalPercentage,
+          size,
+          sector,
+          categoryId: null,
+        }),
+      )
+
       // Reconstruct API payload
-      const dbCategories = record.scores_categories.map((sc) => ({
-        id: sc.categorie_id,
-        nom: undefined,
-        ordre: 0,
-        score: sc.score,
-        scoreMax: sc.score_max,
-        percentage: sc.score_max > 0 ? clampPercentage((sc.score / sc.score_max) * 100) : 0,
-        difficultyPercentage: sc.score_max > 0 ? 100 - clampPercentage((sc.score / sc.score_max) * 100) : 0,
-        title: undefined,
-        description: undefined,
-        tone: undefined,
-      }))
+      const dbCategories = record.scores_categories
+        .map((sc) => {
+          const percentage = sc.score_max > 0 ? clampPercentage((sc.score / sc.score_max) * 100) : 0
+          const difficultyPercentage = 100 - percentage
+          const narrative = applyRecommendationToNarrative(
+            getDiagnosticNarrative(difficultyPercentage, {
+              size,
+              sector,
+              categoryId: sc.categorie_id,
+              categoryName: sc.categorie?.nom,
+            }),
+            selectBestRecommendation(recommendationMessages, {
+              score: percentage,
+              size,
+              sector,
+              categoryId: sc.categorie_id,
+            }),
+          )
+
+          return {
+            id: sc.categorie_id,
+            nom: sc.categorie?.nom,
+            ordre: sc.categorie?.ordre || 0,
+            score: sc.score,
+            scoreMax: sc.score_max,
+            percentage,
+            difficultyPercentage,
+            title: narrative.title,
+            description: narrative.description,
+            advice: narrative.advice,
+            tone: narrative.tone,
+          }
+        })
+        .sort((left, right) => left.ordre - right.ordre)
 
       const dbAnswers = record.reponses.map((r) => ({
         questionId: r.question_id,
@@ -752,16 +1076,20 @@ app.get('/api/diagnostics/:diagnosticId', async (req, res, next) => {
 
       const payload = {
         id: record.id,
-        filters: null,
+        filters: {
+          size,
+          sector,
+        },
         questionCount: dbAnswers.length,
         global: {
           score: record.score_global || 0,
-          scoreMax: dbCategories.reduce((s, c) => s + (c.scoreMax || 0), 0),
-          percentage: record.score_global && dbCategories.length ? clampPercentage((record.score_global / (dbCategories.reduce((s, c) => s + (c.scoreMax || 0), 0))) * 100) : 0,
-          difficultyPercentage: record.score_global ? 100 - (record.score_global || 0) : 0,
-          title: record.niveau_difficulte || undefined,
-          description: undefined,
-          tone: undefined,
+          scoreMax: totalScoreMax,
+          percentage: globalPercentage,
+          difficultyPercentage: globalDifficulty,
+          title: record.niveau_difficulte || globalNarrative.title,
+          description: globalNarrative.description,
+          advice: globalNarrative.advice,
+          tone: globalNarrative.tone,
         },
         categories: dbCategories,
         answers: dbAnswers,

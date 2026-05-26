@@ -1,3 +1,5 @@
+import Link from 'next/link'
+
 export default function Footer() {
   return (
     <>
@@ -5,10 +7,13 @@ export default function Footer() {
         <div className="footerContent">
           <p>&copy; CCI Bordeaux Gironde. Tous droits réservés.</p>
           <nav className="footerNav">
-            <a href="#">Mentions légales</a>
-            <a href="#">Confidentialité</a>
-            <a href="#">Contact</a>
-            <a href="#">FAQ</a>
+            <Link href="/">Accueil</Link>
+            <Link href="/evaluate">Faire le diagnostic</Link>
+            <Link href="/dashboard_user">Tableau de bord</Link>
+            <Link href="/mentions-legales">Mentions légales</Link>
+            <Link href="/confidentialite">Confidentialité</Link>
+            <Link href="/contact">Contact</Link>
+            <Link href="/faq">FAQ</Link>
           </nav>
         </div>
       </footer>
@@ -16,8 +21,8 @@ export default function Footer() {
       <style jsx>{`
         .footer {
           width: 100%;
-          background: rgba(255, 255, 255, 0.92);
-          border-top: 1px solid rgba(61, 72, 120, 0.12);
+          background: rgba(255, 255, 255, 0.95);
+          border-top: 1px solid rgba(38, 37, 47, 0.06);
           margin-top: 60px;
         }
 
@@ -45,10 +50,10 @@ export default function Footer() {
         }
 
         .footerNav a {
-          color: #3551f2;
+          color: #24306f;
           text-decoration: none;
           font-size: 0.95rem;
-          transition: color 0.2s ease;
+          transition: color 0.15s ease;
         }
 
         .footerNav a:hover {

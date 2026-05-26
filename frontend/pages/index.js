@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import Layout from '../components/layout/Layout'
 import meetingImage from '../Business team meeting.png'
 
@@ -80,9 +81,9 @@ export default function Home() {
               <p className="eyebrow">Diagnostic gratuit et rapide</p>
               <h1>COMMENT VA MA BOÎTE ?</h1>
               <p className="lead">Un diagnostic rapide et gratuit pour identifier vos points forts et axes d’amélioration.</p>
-              <a className="primaryButton" href="/evaluate">
+              <Link className="primaryButton" href="/evaluate">
                 JE M’ÉVALUE
-              </a>
+              </Link>
             </div>
 
             <div className="infoStack" aria-label="Informations clés">
@@ -158,9 +159,9 @@ export default function Home() {
               <div className="ctaOverlay">
                 <p className="ctaKicker">MAXIMISEZ VOTRE POTENTIEL</p>
                 <h2>Bénéficiez d’un diagnostic complet pour transformer vos défis en opportunités</h2>
-                <a className="primaryButton secondaryButton" href="/evaluate">
+                <Link className="primaryButton secondaryButton" href="/evaluate">
                   LANCER MON ÉVALUATION
-                </a>
+                </Link>
               </div>
             </div>
           </section>
