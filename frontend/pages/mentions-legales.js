@@ -18,13 +18,16 @@ export default function MentionsLegalesPage() {
         h1 {
           margin: 0 0 16px;
           font-size: clamp(2rem, 4vw, 3rem);
-          color: #1e1c28;
+          font-weight: 800;
+          letter-spacing: -0.03em;
+          color: var(--text-dark, #20232b);
         }
 
         p {
           margin: 0;
-          color: #5e6274;
+          color: var(--text-muted, #5e6274);
           line-height: 1.7;
+          font-size: 1rem;
         }
       `}</style>
     </Layout>

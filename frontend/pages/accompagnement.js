@@ -172,7 +172,7 @@ export default function AccompagnementPage() {
             {error ? <p className="formError" role="alert">{error}</p> : null}
 
             <div className="actions">
-              <button type="submit" className="submitButton" disabled={submitting}>
+              <button type="submit" className="btn-primary" disabled={submitting}>
                 {submitting ? 'VALIDATION EN COURS...' : 'VALIDER'}
               </button>
             </div>
@@ -270,8 +270,8 @@ export default function AccompagnementPage() {
         .fieldsGrid select {
           height: 42px;
           border: 0;
-          border-radius: 2px;
-          background: #f3f3f7;
+          border-radius: var(--radius-input, 6px);
+          background: var(--bg-input, #f3f3f7);
           color: #222633;
           padding: 0 14px;
           font: inherit;
@@ -283,13 +283,13 @@ export default function AccompagnementPage() {
         .fieldsGrid input:focus,
         .fieldsGrid select:focus,
         .readonlyField:focus-within {
-          box-shadow: 0 0 0 3px rgba(52, 68, 244, 0.14);
+          box-shadow: 0 0 0 3px rgba(49, 70, 245, 0.14);
           background: #ffffff;
         }
 
         .credentialsCard {
-          background: #e9e9ee;
-          border-left: 6px solid #3444f4;
+          background: var(--blue-bg, #e7ebff);
+          border-left: 6px solid var(--blue-primary, #3146f5);
           border-radius: 20px;
           padding: 18px 18px 16px;
         }
@@ -332,18 +332,19 @@ export default function AccompagnementPage() {
         }
 
         .submitButton {
-          min-width: 112px;
-          height: 38px;
+          min-width: 140px;
+          height: 46px;
           padding: 0 28px;
           border: 0;
-          border-radius: 999px;
-          background: linear-gradient(180deg, #3c48f4 0%, #2e35de 100%);
+          border-radius: var(--radius-btn, 8px);
+          background: var(--btn-gradient, linear-gradient(180deg, #4a62ff 0%, #3146f5 100%));
           color: #ffffff;
           font-size: 0.94rem;
           font-weight: 700;
-          letter-spacing: 0.01em;
-          box-shadow: 0 16px 28px rgba(52, 68, 244, 0.22);
+          letter-spacing: 0.04em;
+          box-shadow: var(--shadow-btn, 0 16px 28px rgba(49, 70, 245, 0.22));
           cursor: pointer;
+          transition: filter 0.2s ease, transform 0.2s ease;
         }
 
         .submitButton:disabled {
@@ -351,8 +352,9 @@ export default function AccompagnementPage() {
           cursor: progress;
         }
 
-        .submitButton:hover {
-          filter: brightness(1.04);
+        .submitButton:hover:not(:disabled) {
+          filter: brightness(1.05);
+          transform: translateY(-1px);
         }
 
         @media (max-width: 768px) {

@@ -375,7 +375,7 @@ export default function AccountPage() {
                       {passwordSuccess ? <p className="passwordMessage successMessage" role="status">{passwordSuccess}</p> : null}
 
                       <div className="actions">
-                        <button type="submit" disabled={passwordSubmitting}>
+                        <button type="submit" className="btn-primary" disabled={passwordSubmitting}>
                           {passwordSubmitting ? 'MISE À JOUR...' : 'DÉFINIR LE MOT DE PASSE'}
                         </button>
                       </div>
@@ -480,7 +480,7 @@ export default function AccountPage() {
                     </div>
 
                     <div className="actions">
-                      <button type="submit" disabled={accountSaving}>
+                      <button type="submit" className="btn-primary" disabled={accountSaving}>
                         {accountSaving ? 'ENREGISTREMENT...' : 'MODIFIER'}
                       </button>
                     </div>
@@ -624,12 +624,20 @@ export default function AccountPage() {
           width: 100%;
           height: 42px;
           border: 0;
-          border-radius: 0;
-          background: #f4f4f8;
+          border-radius: var(--radius-input, 6px);
+          background: var(--bg-input, #f3f3f7);
           color: #2d3142;
           padding: 0 14px;
           font: inherit;
           outline: none;
+          box-shadow: inset 0 0 0 1px transparent;
+          transition: box-shadow 0.18s ease, background 0.18s ease;
+        }
+
+        .field input:focus,
+        .field select:focus {
+          box-shadow: 0 0 0 3px rgba(49, 70, 245, 0.14);
+          background: #ffffff;
         }
 
         .field select {
@@ -652,13 +660,19 @@ export default function AccountPage() {
           min-width: 140px;
           height: 46px;
           border: 0;
-          border-radius: 8px;
-          background: linear-gradient(180deg, #4154ef 0%, #2f46f5 100%);
+          border-radius: var(--radius-btn, 8px);
+          background: var(--btn-gradient, linear-gradient(180deg, #4a62ff 0%, #3146f5 100%));
           color: #fff;
           font-weight: 700;
           letter-spacing: 0.04em;
           cursor: pointer;
-          box-shadow: 0 14px 24px rgba(49, 70, 245, 0.26);
+          box-shadow: var(--shadow-btn, 0 14px 24px rgba(49, 70, 245, 0.26));
+          transition: filter 0.2s ease, transform 0.2s ease;
+        }
+
+        .actions button:hover:not(:disabled) {
+          filter: brightness(1.05);
+          transform: translateY(-1px);
         }
 
         .actions button:disabled {

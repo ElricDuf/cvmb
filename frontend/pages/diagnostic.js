@@ -18,6 +18,166 @@ const sizeLabels = {
 
 const storageKey = 'cvmb:lastDiagnostic'
 
+function RadarChart({ categories }) {
+  const cx = 200
+  const cy = 190
+  const maxR = 130
+  const n = categories.length
+
+  if (n < 3) return null
+
+  const angle = (i) => (2 * Math.PI * i) / n - Math.PI / 2
+
+  const polarToCart = (i, pct) => {
+    const r = (pct / 100) * maxR
+    return [cx + r * Math.cos(angle(i)), cy + r * Math.sin(angle(i))]
+  }
+
+  const gridLevels = [25, 50, 75, 100]
+
+  const gridPolygon = (pct) =>
+    categories.map((_, i) => polarToCart(i, pct).join(',')).join(' ')
+
+  const dataPolygon = categories
+    .map((cat, i) => polarToCart(i, cat.percentage).join(','))
+    .join(' ')
+
+  const toneColor = (tone) => {
+    if (tone === 'red') return '#ef4444'
+    if (tone === 'orange') return '#f97316'
+    if (tone === 'green') return '#16a34a'
+    return '#3146f5'
+  }
+
+  return (
+    <svg
+      viewBox="0 0 400 380"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-label="Graphique radar des scores par catégorie"
+      style={{ width: '100%', maxWidth: 400, display: 'block', margin: '0 auto' }}
+    >
+      {/* Grille de fond */}
+      {gridLevels.map((pct) => (
+        <polygon
+          key={pct}
+          points={gridPolygon(pct)}
+          fill={pct === 100 ? 'rgba(49,70,245,0.04)' : 'none'}
+          stroke={pct === 100 ? 'rgba(49,70,245,0.2)' : 'rgba(49,70,245,0.1)'}
+          strokeWidth="1"
+        />
+      ))}
+
+      {/* Axes */}
+      {categories.map((_, i) => {
+        const [ex, ey] = polarToCart(i, 100)
+        return (
+          <line
+            key={i}
+            x1={cx} y1={cy}
+            x2={ex} y2={ey}
+            stroke="rgba(49,70,245,0.15)"
+            strokeWidth="1"
+          />
+        )
+      })}
+
+      {/* Marques de valeurs sur les axes (25/50/75/100) */}
+      {categories.map((_, i) =>
+        [25, 50, 75, 100].map((pct) => {
+          const [mx, my] = polarToCart(i, pct)
+          return (
+            <circle key={`${i}-${pct}`} cx={mx} cy={my} r="2" fill="rgba(49,70,245,0.2)" />
+          )
+        })
+      )}
+
+      {/* Polygone de données */}
+      <polygon
+        points={dataPolygon}
+        fill="rgba(49,70,245,0.15)"
+        stroke="#3146f5"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
+
+      {/* Points de données */}
+      {categories.map((cat, i) => {
+        const [px, py] = polarToCart(i, cat.percentage)
+        return (
+          <circle
+            key={cat.id}
+            cx={px} cy={py}
+            r="5"
+            fill={toneColor(cat.tone)}
+            stroke="#fff"
+            strokeWidth="2"
+          />
+        )
+      })}
+
+      {/* Labels */}
+      {categories.map((cat, i) => {
+        const labelR = maxR + 28
+        const [lx, ly] = [
+          cx + labelR * Math.cos(angle(i)),
+          cy + labelR * Math.sin(angle(i)),
+        ]
+        const anchor =
+          Math.abs(Math.cos(angle(i))) < 0.1
+            ? 'middle'
+            : Math.cos(angle(i)) > 0
+            ? 'start'
+            : 'end'
+        return (
+          <g key={cat.id}>
+            <text
+              x={lx}
+              y={ly - 4}
+              textAnchor={anchor}
+              fontSize="11"
+              fontWeight="600"
+              fill="#20232b"
+            >
+              {cat.nom}
+            </text>
+            <text
+              x={lx}
+              y={ly + 10}
+              textAnchor={anchor}
+              fontSize="11"
+              fontWeight="700"
+              fill={toneColor(cat.tone)}
+            >
+              {cat.percentage}%
+            </text>
+          </g>
+        )
+      })}
+
+      {/* Score central */}
+      <text
+        x={cx} y={cy - 6}
+        textAnchor="middle"
+        fontSize="22"
+        fontWeight="800"
+        fill="#3146f5"
+      >
+        {Math.round(categories.reduce((sum, c) => sum + c.percentage, 0) / n)}%
+      </text>
+      <text
+        x={cx} y={cy + 10}
+        textAnchor="middle"
+        fontSize="9"
+        fontWeight="700"
+        fill="#82859a"
+        letterSpacing="0.08em"
+      >
+        MAÎTRISE
+      </text>
+    </svg>
+  )
+}
+
 function getBadgeClass(tone) {
   if (tone === 'red') return 'red'
   if (tone === 'orange') return 'orange'
@@ -296,19 +456,11 @@ export default function DiagnosticPage() {
 
           <article className="card radar">
             <h2>Répartition des scores</h2>
-            <div className="radarList" aria-label="Répartition des scores par catégorie">
-              {(diagnostic.categories || []).map((category) => (
-                <div key={category.id} className="radarItem">
-                  <div className="radarItemHeader">
-                    <span>{category.nom}</span>
-                    <strong>{category.difficultyPercentage}%</strong>
-                  </div>
-                  <div className="radarTrack" aria-hidden="true">
-                    <div className="radarFill" style={{ width: `${category.difficultyPercentage}%` }} />
-                  </div>
-                </div>
-              ))}
-            </div>
+            {(diagnostic.categories || []).length >= 3 ? (
+              <RadarChart categories={diagnostic.categories} />
+            ) : (
+              <p style={{ color: '#5e6274', marginTop: 12 }}>Données insuffisantes pour afficher le radar.</p>
+            )}
           </article>
         </div>
 
@@ -542,33 +694,14 @@ export default function DiagnosticPage() {
             letter-spacing: 0.05em;
           }
 
-          .radarList {
+          .card.radar {
             display: flex;
             flex-direction: column;
-            gap: 14px;
-            margin-top: 16px;
+            align-items: center;
           }
 
-          .radarItemHeader {
-            display: flex;
-            justify-content: space-between;
-            gap: 12px;
-            margin-bottom: 8px;
-            font-size: 0.95rem;
-            color: var(--text-main);
-          }
-
-          .radarTrack {
-            height: 10px;
-            border-radius: 999px;
-            background: #e9eefc;
-            overflow: hidden;
-          }
-
-          .radarFill {
-            height: 100%;
-            border-radius: inherit;
-            background: linear-gradient(90deg, var(--primary), #7da0ff);
+          .card.radar h2 {
+            width: 100%;
           }
 
           .card.big {

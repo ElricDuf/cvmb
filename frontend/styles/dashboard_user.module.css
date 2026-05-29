@@ -41,9 +41,9 @@
   place-items: center;
   width: 32px;
   height: 32px;
-  border-radius: 999px;
-  background: #354ff2;
-  color: #fff;
+  border-radius: 10px;
+  background: #e7ebff;
+  color: #3146f5;
   font-weight: 700;
   flex: 0 0 auto;
 }

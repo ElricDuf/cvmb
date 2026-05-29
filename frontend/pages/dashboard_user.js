@@ -109,7 +109,7 @@ function Sidebar({ profile }) {
   return (
     <aside className={styles.sidebar} aria-label="Navigation du tableau de bord">
       <div className={styles.sidebarProfile}>
-        <span className={styles.sidebarAvatar}>J</span>
+        <span className={styles.sidebarAvatar}>{profile?.initials || 'U'}</span>
         <div>
           <strong>{profile?.name || 'Utilisateur'}</strong>
           <span>{profile?.company || 'Entreprise'}</span>
@@ -309,10 +309,16 @@ export default function DashboardUserPage() {
   const profile = useMemo(() => {
     const user = session?.user || {}
     const name = [user.prenom, user.nom].filter(Boolean).join(' ').trim()
+    const initials = [user.prenom, user.nom]
+      .filter(Boolean)
+      .map((part) => part[0])
+      .join('')
+      .toUpperCase() || (user.email?.[0] || 'U').toUpperCase()
 
     return {
       name: name || user.email || 'Utilisateur',
       company: session?.entreprise?.raisonSociale || session?.enterprise?.raisonSociale || 'Entreprise',
+      initials,
     }
   }, [session])
 

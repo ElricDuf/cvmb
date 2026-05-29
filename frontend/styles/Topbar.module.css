@@ -1,0 +1,298 @@
+.topbar {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
+  transition: background-color 0.3s ease;
+}
+
+.topbarInner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.brandGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 16px;
+  flex: 0 1 auto;
+  min-width: 0;
+}
+
+.siteBrand,
+.cciBrand {
+  text-decoration: none;
+  transition: transform 0.2s ease, opacity 0.2s ease;
+}
+
+.cciBrand:hover {
+  opacity: 0.8;
+  transform: scale(0.98);
+}
+
+.siteBrand {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 8px 14px 8px 8px;
+  border-radius: 14px;
+  background: transparent;
+  color: #1e293b;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.siteBrand:hover {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.siteBrandMark {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--blue-light, #4a62ff) 0%, var(--blue-primary, #3146f5) 100%);
+  color: #ffffff;
+  font-size: 0.9rem;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  flex: 0 0 auto;
+  box-shadow: 0 4px 10px rgba(49, 70, 245, 0.3);
+}
+
+.siteBrandText {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.siteBrandText strong {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+.siteBrandText span {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.brandLogo {
+  display: block;
+  width: 100px;
+  height: auto;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.05));
+}
+
+.evaluateButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 24px;
+  border-radius: var(--radius-btn, 8px);
+  background: var(--btn-gradient, linear-gradient(180deg, #4a62ff 0%, #3146f5 100%));
+  color: #ffffff;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 14px var(--blue-shadow, rgba(49, 70, 245, 0.25));
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.evaluateButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(49, 70, 245, 0.4);
+  filter: brightness(1.05);
+}
+
+.evaluateButton:active {
+  transform: translateY(0);
+}
+
+.accountActions {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.accountButton {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 16px 8px 8px;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  color: #1e293b;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  cursor: pointer;
+  text-decoration: none;
+  font: inherit;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.02);
+}
+
+.accountButton:hover {
+  border-color: #cbd5e1;
+  background: #f8fafc;
+}
+
+.accountButtonLogged {
+  min-width: 0;
+  padding-right: 14px;
+}
+
+.accountButtonOpen {
+  border-color: var(--blue-primary, #3146f5);
+  box-shadow: 0 0 0 3px rgba(49, 70, 245, 0.15);
+}
+
+.accountAvatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--blue-bg, #e7ebff);
+  color: var(--blue-primary, #3146f5);
+  display: grid;
+  place-items: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  flex: 0 0 auto;
+}
+
+.accountText {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  line-height: 1.2;
+}
+
+.accountText strong {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #0f172a;
+  white-space: nowrap;
+}
+
+.accountText span {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.accountChevron {
+  width: 18px;
+  height: 18px;
+  margin-left: 4px;
+  flex: 0 0 auto;
+  color: #94a3b8;
+  transition: transform 0.3s ease;
+}
+
+.accountButtonOpen .accountChevron {
+  transform: rotate(180deg);
+  color: var(--blue-primary, #3146f5);
+}
+
+.accountIcon {
+  width: 22px;
+  height: 22px;
+  color: #64748b;
+  margin-left: 6px;
+}
+
+.accountMenu {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  min-width: 240px;
+  padding: 8px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.15);
+  display: grid;
+  gap: 4px;
+  z-index: 20;
+  animation: menuFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transform-origin: top right;
+}
+
+@keyframes menuFadeIn {
+  from { opacity: 0; transform: scale(0.95) translateY(-10px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.menuLink,
+.menuLogout {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: transparent;
+  border: 0;
+  color: #334155;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  transition: all 0.2s ease;
+}
+
+.menuLink:hover {
+  background: var(--blue-bg, #e7ebff);
+  color: var(--text-dark, #20232b);
+  transform: translateX(4px);
+}
+
+.menuDivider {
+  height: 1px;
+  background: #e2e8f0;
+  margin: 4px 0;
+}
+
+.menuLogout {
+  color: #ef4444;
+}
+
+.menuLogout:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+@media (max-width: 768px) {
+  .topbarInner { padding: 12px 16px; justify-content: center; }
+  .brandGroup { width: 100%; justify-content: space-between; margin-bottom: 8px; }
+  .siteBrand { flex: 1 1 auto; }
+  .brandLogo { width: 80px; }
+  .evaluateButton { width: 100%; order: 3; margin-top: 8px; }
+  .accountActions { width: 100%; order: 2; }
+  .accountButton { width: 100%; justify-content: space-between; }
+  .accountMenu { width: 100%; right: 0; top: calc(100% + 8px); }
+}

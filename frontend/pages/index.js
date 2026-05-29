@@ -81,7 +81,7 @@ export default function Home() {
               <p className="eyebrow">Diagnostic gratuit et rapide</p>
               <h1>COMMENT VA MA BOÎTE ?</h1>
               <p className="lead">Un diagnostic rapide et gratuit pour identifier vos points forts et axes d’amélioration.</p>
-              <Link className="primaryButton" href="/evaluate">
+              <Link className="btn-primary" href="/evaluate">
                 JE M’ÉVALUE
               </Link>
             </div>
@@ -159,7 +159,7 @@ export default function Home() {
               <div className="ctaOverlay">
                 <p className="ctaKicker">MAXIMISEZ VOTRE POTENTIEL</p>
                 <h2>Bénéficiez d’un diagnostic complet pour transformer vos défis en opportunités</h2>
-                <Link className="primaryButton secondaryButton" href="/evaluate">
+                <Link className="btn-primary" href="/evaluate" style={{minWidth: '196px', paddingInline: '26px'}}>
                   LANCER MON ÉVALUATION
                 </Link>
               </div>
@@ -212,22 +212,7 @@ export default function Home() {
             color: #5e6274;
           }
 
-          .primaryButton {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            min-width: 158px;
-            padding: 14px 24px;
-            border-radius: 8px;
-            border: 0;
-            background: linear-gradient(180deg, #4a62ff 0%, #3146f5 100%);
-            color: #fff;
-            text-decoration: none;
-            font-size: 0.84rem;
-            font-weight: 700;
-            letter-spacing: 0.08em;
-            box-shadow: 0 10px 22px rgba(49, 70, 245, 0.22);
-          }
+          /* .btn-primary est défini dans globals.css */
 
           .infoStack {
             display: grid;
@@ -428,10 +413,6 @@ export default function Home() {
             margin-bottom: 24px;
           }
 
-          .secondaryButton {
-            min-width: 196px;
-            padding-inline: 26px;
-          }
 
           @media (max-width: 920px) {
             .heroGrid,
