@@ -2,18 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/router'
 import Layout from '../components/layout/Layout'
 
-const sectorLabels = {
-  commerce: 'Commerçant',
-  artisan: 'Artisan',
-  liberal: 'Profession libérale',
-  industrial: 'Industriel',
-  services: 'Prestataire de services',
-}
-
-const companySizeLabels = {
-  TPE: 'TPE',
-  PME: 'PME',
-}
+const ANSWERS_STORAGE_KEY = 'cvmb:questionnaireAnswers'
 
 export default function QuestionnairePage() {
   const router = useRouter()
@@ -70,6 +59,17 @@ export default function QuestionnairePage() {
 
         if (!cancelled) {
           setPayload(data)
+          // Restauration des réponses sauvegardées automatiquement (même contexte)
+          if (typeof window !== 'undefined') {
+            try {
+              const saved = JSON.parse(window.localStorage.getItem(ANSWERS_STORAGE_KEY) || 'null')
+              if (saved && saved.size === selectedSize && saved.sector === selectedSector && saved.answers) {
+                setAnswers(saved.answers)
+              }
+            } catch {
+              /* ignore */
+            }
+          }
         }
       } catch (fetchError) {
         if (!cancelled) {
@@ -107,16 +107,37 @@ export default function QuestionnairePage() {
   const totalQuestions = questions.length
   const selectedAnswer = currentQuestion ? answers[currentQuestion.id] || '' : ''
   const progress = totalQuestions > 0 ? Math.round(((currentIndex + 1) / totalQuestions) * 100) : 0
-  const activeCategoryId = currentQuestion?.category?.id || null
+
+  // Sauvegarde automatique des réponses
+  useEffect(() => {
+    if (typeof window === 'undefined' || !selectedSize || !selectedSector) {
+      return
+    }
+    if (Object.keys(answers).length === 0) {
+      return
+    }
+    try {
+      window.localStorage.setItem(
+        ANSWERS_STORAGE_KEY,
+        JSON.stringify({ size: selectedSize, sector: selectedSector, answers }),
+      )
+    } catch {
+      /* ignore */
+    }
+  }, [answers, selectedSize, selectedSector])
 
   const handlePrevious = () => {
+    if (completed) {
+      setCompleted(false)
+      return
+    }
+
     if (currentIndex === 0) {
       router.push('/evaluate')
       return
     }
 
     setCurrentIndex((value) => Math.max(value - 1, 0))
-    setCompleted(false)
   }
 
   const handleNext = () => {
@@ -205,6 +226,7 @@ export default function QuestionnairePage() {
 
       window.localStorage.setItem('cvmb:lastDiagnostic', JSON.stringify(data))
       window.localStorage.setItem('cvmb:lastDiagnosticId', data.id)
+      window.localStorage.removeItem(ANSWERS_STORAGE_KEY)
 
       await router.push({
         pathname: '/diagnostic',
@@ -220,25 +242,24 @@ export default function QuestionnairePage() {
   if (!router.isReady || loading) {
     return (
       <Layout>
-        <div className="questionnaireContainer">
+        <div className="quiz">
           <div className="stateCard">
-            <p>Chargement des questions filtrées...</p>
+            <p>Chargement des questions…</p>
           </div>
         </div>
-
         <style jsx>{`
-          .questionnaireContainer {
-            max-width: 1000px;
+          .quiz {
+            max-width: 760px;
             margin: 0 auto;
-            padding: 40px 24px;
+            padding: 40px 24px 64px;
           }
-
           .stateCard {
             background: #fff;
+            border: 1px solid var(--border-subtle);
             border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+            box-shadow: var(--shadow-card);
             padding: 40px;
-            color: #5e6274;
+            color: var(--text-muted);
             text-align: center;
           }
         `}</style>
@@ -246,107 +267,93 @@ export default function QuestionnairePage() {
     )
   }
 
+  const isLast = currentIndex >= totalQuestions - 1
+  const categoryName = currentQuestion?.category?.nom || ''
+
   return (
     <Layout>
-      <div className="questionnaireContainer">
-        <div className="sectionTabs">
-          {(payload?.categories || []).map((category) => (
-            <div key={category.id} className="tab" data-active={activeCategoryId === category.id}>
-              <span className="tabTitle">Partie {category.ordre} :</span>
-              <span className="tabLabel">{category.nom}</span>
-              <span className="tabMeta">
-                {category.questions.length} question{category.questions.length > 1 ? 's' : ''}
+      <div className="quiz">
+        {/* En-tête : compteur + catégorie + barre de progression */}
+        {!error && totalQuestions > 0 ? (
+          <div className="quizTop">
+            <div className="quizMeta">
+              <span className="counter">
+                Question {Math.min(currentIndex + 1, totalQuestions)} sur {totalQuestions}
               </span>
+              {categoryName ? <span className="topCategory">{categoryName}</span> : null}
             </div>
-          ))}
-        </div>
-
-        <div className="progressSection">
-          <div className="progressText">
-            <span>PROGRESSION DU DIAGNOSTIC</span>
-            <span className="percentage">{progress}%</span>
+            <div className="track">
+              <div className="bar" style={{ width: `${progress}%` }} />
+            </div>
           </div>
-          <div className="progressTrack">
-            <div className="progressBar" style={{ width: `${progress}%` }} />
-          </div>
-        </div>
-
-        <div className="metaRow" aria-label="Contexte du questionnaire">
-          <span className="metaChip">Taille: {companySizeLabels[selectedSize] || selectedSize}</span>
-          <span className="metaChip">Secteur: {sectorLabels[selectedSector] || selectedSector}</span>
-          <span className="metaChip">
-            {totalQuestions} question{totalQuestions > 1 ? 's' : ''} trouvée{totalQuestions > 1 ? 's' : ''}
-          </span>
-        </div>
+        ) : null}
 
         {error ? (
           <div className="stateCard errorCard">
             <p>{error}</p>
-            <button type="button" className="returnButton" onClick={() => router.push('/evaluate')}>
+            <button type="button" className="btnGhost" onClick={() => router.push('/evaluate')}>
               Revenir à la saisie
             </button>
           </div>
         ) : completed ? (
           <div className="stateCard completionCard">
             <p className="completionTitle">Questionnaire terminé</p>
-            <p>Toutes les questions filtrées pour cette entreprise ont été posées.</p>
-            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 16 }}>
-              <button type="button" className="submitBtn" onClick={handleSubmitDiagnostic} disabled={submitting}>
-                {submitting ? 'Calcul en cours...' : 'Valider'}
+            <p className="completionText">
+              Toutes les questions ont reçu une réponse. Vous pouvez générer votre diagnostic.
+            </p>
+            {submitError ? <p className="submitError">{submitError}</p> : null}
+            <div className="footer">
+              <button type="button" className="btnPrev" onClick={handlePrevious}>
+                <ArrowLeft /> Précédent
               </button>
-              <button type="button" className="returnButton" onClick={() => router.push('/evaluate')}>
-                Recommencer
+              <span className="autosave">
+                <SaveIcon /> Réponses sauvegardées automatiquement
+              </span>
+              <button type="button" className="btnNext" onClick={handleSubmitDiagnostic} disabled={submitting}>
+                {submitting ? 'Calcul…' : 'Valider'} <ArrowRight />
               </button>
             </div>
-            {submitError ? <p className="submitError">{submitError}</p> : null}
           </div>
         ) : currentQuestion ? (
           <>
-            <button className="backButton" type="button" onClick={handlePrevious}>
-              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M19 12H5M12 19l-7-7 7-7" />
-              </svg>
-              {currentIndex === 0 ? 'RETOUR À LA SAISIE' : 'QUESTION PRÉCÉDENTE'}
-            </button>
+            <p className="eyebrow catEyebrow">{categoryName}</p>
+            <h1 className="question">{currentQuestion.texte}</h1>
 
-            <div className="questionCard">
-              <div className="questionHeader">
-                <div className="questionHeaderRow">
-                  <span className="questionIndex">
-                    Question {currentIndex + 1} / {totalQuestions}
-                  </span>
-                  <span className="questionScope">{currentQuestion.category.nom}</span>
-                </div>
-                <h2>{currentQuestion.texte}</h2>
-              </div>
-
-              <div className="optionsList">
-                {(currentQuestion.responses || []).map((option) => (
-                  <label key={option.id} className="optionItem">
+            <div className="options">
+              {(currentQuestion.responses || []).map((option) => {
+                const checked = Number(selectedAnswer) === option.id
+                return (
+                  <label key={option.id} className="option" data-selected={checked}>
                     <input
                       type="radio"
                       name={`question-${currentQuestion.id}`}
                       value={option.id}
-                      checked={Number(selectedAnswer) === option.id}
+                      checked={checked}
                       onChange={() => handleAnswerChange(currentQuestion.id, option.id)}
                     />
-                    <span className="radioCustom" />
-                    <span className="optionText">{option.texte}</span>
+                    <span className="radio" aria-hidden="true" />
+                    <span className="optLabel">{option.texte}</span>
                   </label>
-                ))}
-              </div>
+                )
+              })}
+            </div>
 
-              <div className="cardActions">
-                <button type="button" className="submitBtn" onClick={handleNext} disabled={!selectedAnswer}>
-                  {currentIndex >= totalQuestions - 1 ? 'TERMINER' : 'SUIVANTE'}
-                </button>
-              </div>
+            <div className="footer">
+              <button type="button" className="btnPrev" onClick={handlePrevious}>
+                <ArrowLeft /> Précédent
+              </button>
+              <span className="autosave">
+                <SaveIcon /> Réponses sauvegardées automatiquement
+              </span>
+              <button type="button" className="btnNext" onClick={handleNext} disabled={!selectedAnswer}>
+                {isLast ? 'Terminer' : 'Suivant'} <ArrowRight />
+              </button>
             </div>
           </>
         ) : (
           <div className="stateCard">
             <p>Aucune question ne correspond aux critères sélectionnés.</p>
-            <button type="button" className="returnButton" onClick={() => router.push('/evaluate')}>
+            <button type="button" className="btnGhost" onClick={() => router.push('/evaluate')}>
               Modifier la sélection
             </button>
           </div>
@@ -354,269 +361,199 @@ export default function QuestionnairePage() {
       </div>
 
       <style jsx>{`
-        .questionnaireContainer {
-          max-width: 1000px;
+        .quiz {
+          max-width: 760px;
           margin: 0 auto;
-          padding: 40px 24px;
+          padding: 36px 24px 64px;
         }
 
-        .sectionTabs {
-          display: grid;
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-          gap: 2px;
-          border-radius: 8px;
-          overflow: hidden;
-          margin-bottom: 24px;
+        /* --- En-tête --- */
+        .quizTop {
+          margin-bottom: 36px;
         }
 
-        .tab {
-          background: #d9dffb;
-          padding: 18px 15px 16px;
-          text-align: left;
-          color: #3d4878;
-          transition: background 0.3s;
-        }
-
-        .tab[data-active='true'] {
-          background: #9ba8f5;
-          color: #1e1c28;
-        }
-
-        .tabTitle {
-          display: block;
-          font-weight: 800;
-          font-size: var(--fs-md);
-          margin-bottom: 4px;
-        }
-
-        .tabLabel {
-          font-size: var(--fs-sm);
-          line-height: 1.3;
-          display: block;
-        }
-
-        .tabMeta {
-          display: inline-flex;
-          margin-top: 8px;
-          font-size: var(--fs-2xs);
-          letter-spacing: 0.04em;
-          text-transform: uppercase;
-          color: inherit;
-          opacity: 0.8;
-        }
-
-        .progressSection {
-          margin-bottom: 18px;
-        }
-
-        .progressText {
+        .quizMeta {
           display: flex;
           justify-content: space-between;
-          align-items: flex-end;
-          font-size: var(--fs-2xs);
-          font-weight: 700;
-          color: #8a8fa3;
-          margin-bottom: 10px;
-          letter-spacing: 0.05em;
-        }
-
-        .percentage {
-          font-size: var(--fs-h3);
-          color: #3551f2;
-        }
-
-        .progressTrack {
-          height: 8px;
-          background: #e2e5f1;
-          border-radius: 10px;
-          overflow: hidden;
-        }
-
-        .progressBar {
-          height: 100%;
-          background: #3551f2;
-          transition: width 0.4s ease;
-        }
-
-        .metaRow {
-          display: flex;
-          flex-wrap: wrap;
-          gap: 10px;
-          margin-bottom: 20px;
-        }
-
-        .metaChip {
-          display: inline-flex;
-          align-items: center;
-          min-height: 32px;
-          padding: 0 12px;
-          border-radius: 999px;
-          background: rgba(53, 81, 242, 0.08);
-          color: #3551f2;
-          font-size: var(--fs-xs);
-          font-weight: 700;
-        }
-
-        .backButton {
-          display: inline-flex;
-          align-items: center;
-          gap: 8px;
-          background: none;
-          border: none;
-          color: #5e6274;
-          font-size: var(--fs-2xs);
-          font-weight: 700;
-          cursor: pointer;
-          margin-bottom: 20px;
-          padding: 0;
-        }
-
-        .questionCard {
-          background: #ffffff;
-          border-radius: 16px;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
-          overflow: hidden;
-        }
-
-        .questionHeader {
-          background: #e7ebff;
-          padding: 28px 30px 30px;
-          text-align: center;
-        }
-
-        .questionHeaderRow {
-          display: flex;
-          flex-wrap: wrap;
-          justify-content: center;
-          gap: 10px;
+          align-items: baseline;
+          gap: 16px;
           margin-bottom: 12px;
         }
 
-        .questionIndex,
-        .questionScope {
-          display: inline-flex;
-          align-items: center;
-          padding: 6px 10px;
+        .counter {
+          font-size: var(--fs-sm);
+          font-weight: var(--fw-semibold);
+          color: var(--text-muted);
+        }
+
+        .topCategory {
+          font-size: var(--fs-sm);
+          font-weight: var(--fw-bold);
+          color: var(--blue-primary);
+          text-align: right;
+        }
+
+        .track {
+          height: 6px;
+          background: #e6e8f4;
           border-radius: 999px;
-          font-size: var(--fs-2xs);
-          font-weight: 700;
-          letter-spacing: 0.04em;
-          text-transform: uppercase;
+          overflow: hidden;
         }
 
-        .questionIndex {
-          background: rgba(53, 81, 242, 0.14);
-          color: #3551f2;
+        .bar {
+          height: 100%;
+          border-radius: 999px;
+          background: linear-gradient(90deg, #9333ea 0%, #3551f2 100%);
+          transition: width 0.4s ease;
         }
 
-        .questionScope {
-          background: rgba(255, 255, 255, 0.7);
-          color: #34406f;
+        /* --- Question --- */
+        .catEyebrow {
+          margin: 0 0 10px;
         }
 
-        .questionHeader h2 {
-          margin: 0;
-          font-size: var(--fs-h3);
-          color: #1e1c28;
-          font-weight: 700;
-          line-height: 1.35;
+        .question {
+          margin: 0 0 28px;
+          font-size: var(--fs-h2);
+          font-weight: var(--fw-black);
+          line-height: var(--lh-tight);
+          letter-spacing: -0.02em;
+          color: var(--text-dark);
         }
 
-        .optionsList {
-          padding: 30px;
+        /* --- Options --- */
+        .options {
           display: flex;
           flex-direction: column;
-          gap: 16px;
+          gap: 14px;
+          margin-bottom: 36px;
         }
 
-        .optionItem {
+        .option {
           display: flex;
           align-items: center;
+          gap: 16px;
           padding: 20px 24px;
-          border: 1px solid #eef0f7;
-          border-radius: 10px;
+          background: #fff;
+          border: 1px solid var(--border-subtle);
+          border-radius: 14px;
+          box-shadow: 0 4px 14px rgba(32, 41, 72, 0.05);
           cursor: pointer;
-          transition: all 0.2s;
+          transition: border-color 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
         }
 
-        .optionItem:hover {
-          background: #f9faff;
+        .option:hover {
+          border-color: rgba(49, 70, 245, 0.45);
         }
 
-        .optionItem input {
+        .option[data-selected='true'] {
+          border-color: var(--blue-primary);
+          background: #f6f7ff;
+          box-shadow: 0 0 0 3px rgba(49, 70, 245, 0.12);
+        }
+
+        .option input {
           position: absolute;
           opacity: 0;
           pointer-events: none;
         }
 
-        .radioCustom {
-          width: 20px;
-          height: 20px;
-          border: 2px solid #ced4da;
+        .radio {
+          width: 22px;
+          height: 22px;
+          border: 2px solid #c8cde0;
           border-radius: 50%;
-          margin-right: 15px;
-          position: relative;
           flex: 0 0 auto;
+          position: relative;
+          transition: border-color 0.18s ease;
         }
 
-        .optionItem input:checked + .radioCustom {
-          border-color: #3551f2;
+        .option[data-selected='true'] .radio {
+          border-color: var(--blue-primary);
         }
 
-        .optionItem input:checked + .radioCustom::after {
+        .option[data-selected='true'] .radio::after {
           content: '';
           position: absolute;
           inset: 3px;
-          background: #3551f2;
           border-radius: 50%;
+          background: var(--blue-primary);
         }
 
-        .optionText {
+        .optLabel {
           font-size: var(--fs-lead);
-          color: #1e1c28;
+          font-weight: var(--fw-semibold);
+          color: var(--text-dark);
         }
 
-        .cardActions {
-          padding: 0 30px 40px;
+        /* --- Pied de page --- */
+        .footer {
           display: flex;
-          justify-content: flex-end;
+          align-items: center;
+          justify-content: space-between;
+          gap: 16px;
         }
 
-        .submitBtn,
-        .returnButton {
-          border: none;
-          border-radius: 8px;
-          font-weight: 700;
-          font-size: var(--fs-md);
+        .autosave {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          font-size: var(--fs-sm);
+          color: var(--text-muted);
+          text-align: center;
+        }
+
+        .btnPrev,
+        .btnNext {
+          display: inline-flex;
+          align-items: center;
+          gap: 10px;
+          border-radius: var(--radius-btn);
+          font-size: var(--fs-sm);
+          font-weight: var(--fw-bold);
           cursor: pointer;
+          transition: transform 0.18s ease, filter 0.18s ease, background 0.18s ease;
         }
 
-        .submitBtn {
-          background: #0026e6;
-          color: white;
-          padding: 14px 40px;
-          box-shadow: 0 4px 12px rgba(0, 38, 230, 0.3);
+        .btnPrev {
+          padding: 13px 22px;
+          background: #fff;
+          color: var(--text-dark);
+          border: 1px solid var(--border-subtle);
+          box-shadow: 0 4px 12px rgba(32, 41, 72, 0.06);
         }
 
-        .submitBtn:disabled {
-          opacity: 0.5;
+        .btnPrev:hover {
+          background: #f6f7fb;
+        }
+
+        .btnNext {
+          padding: 14px 26px;
+          border: 0;
+          color: #fff;
+          background: var(--btn-gradient);
+          box-shadow: var(--shadow-btn);
+        }
+
+        .btnNext:hover:not(:disabled) {
+          filter: brightness(1.06);
+          transform: translateY(-2px);
+        }
+
+        .btnNext:disabled {
+          opacity: 0.55;
           cursor: not-allowed;
           box-shadow: none;
         }
 
+        /* --- États --- */
         .stateCard {
           background: #fff;
+          border: 1px solid var(--border-subtle);
           border-radius: 16px;
-          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+          box-shadow: var(--shadow-card);
           padding: 40px;
-          color: #5e6274;
-          text-align: center;
-        }
-
-        .submitError {
-          margin-top: 16px;
-          color: #b42318;
-          font-size: var(--fs-md);
+          color: var(--text-muted);
           text-align: center;
         }
 
@@ -626,63 +563,103 @@ export default function QuestionnairePage() {
         }
 
         .completionCard {
-          color: #34406f;
+          color: var(--text-dark);
         }
 
         .completionTitle {
-          margin-top: 0;
-          font-size: var(--fs-h3);
-          font-weight: 700;
-          color: #1e1c28;
+          margin: 0 0 8px;
+          font-size: var(--fs-h2);
+          font-weight: var(--fw-black);
+          color: var(--text-dark);
         }
 
-        .returnButton {
-          margin-top: 14px;
-          padding: 12px 18px;
-          background: #3551f2;
+        .completionText {
+          margin: 0 0 24px;
+          color: var(--text-muted);
+        }
+
+        .completionCard .footer {
+          margin-top: 8px;
+        }
+
+        .submitError {
+          margin: 0 0 16px;
+          color: var(--danger);
+          font-size: var(--fs-md);
+        }
+
+        .btnGhost {
+          margin-top: 16px;
+          padding: 12px 20px;
+          border: 0;
+          border-radius: var(--radius-btn);
+          background: var(--blue-primary);
           color: #fff;
+          font-weight: var(--fw-bold);
+          font-size: var(--fs-sm);
+          cursor: pointer;
         }
 
-        @media (max-width: 860px) {
-          .sectionTabs {
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-          }
-        }
-
-        @media (max-width: 640px) {
-          .questionnaireContainer {
-            padding: 24px 16px;
+        @media (max-width: 600px) {
+          .quiz {
+            padding: 24px 16px 48px;
           }
 
-          .sectionTabs {
-            grid-template-columns: 1fr;
+          .footer {
+            flex-wrap: wrap;
+            gap: 12px;
           }
 
-          .questionHeader h2 {
-            font-size: var(--fs-h4);
+          .autosave {
+            order: 3;
+            width: 100%;
+            justify-content: center;
           }
 
-          .optionsList {
-            padding: 20px;
+          .btnPrev {
+            order: 1;
           }
 
-          .optionItem {
+          .btnNext {
+            order: 2;
+            margin-left: auto;
+          }
+
+          .option {
             padding: 16px 18px;
           }
 
-          .optionText {
-            font-size: var(--fs-md);
-          }
-
-          .cardActions {
-            padding: 0 20px 24px;
-          }
-
-          .submitBtn {
-            width: 100%;
+          .optLabel {
+            font-size: var(--fs-base);
           }
         }
       `}</style>
     </Layout>
+  )
+}
+
+/* --- Petites icônes inline --- */
+function ArrowLeft() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M19 12H5M12 19l-7-7 7-7" />
+    </svg>
+  )
+}
+
+function ArrowRight() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M5 12h14M12 5l7 7-7 7" />
+    </svg>
+  )
+}
+
+function SaveIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
+      <path d="M17 21v-8H7v8M7 3v5h8" />
+    </svg>
   )
 }
