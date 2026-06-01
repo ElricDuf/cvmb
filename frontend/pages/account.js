@@ -527,7 +527,7 @@ export default function AccountPage() {
           gap: 12px;
           margin-bottom: 28px;
           color: #2d3142;
-          font-size: 1rem;
+          font-size: var(--fs-base);
           font-weight: 500;
         }
 
@@ -537,7 +537,7 @@ export default function AccountPage() {
 
         .accountMessage {
           margin: 0 0 20px;
-          font-size: 0.94rem;
+          font-size: var(--fs-md);
           font-weight: 600;
         }
 
@@ -551,7 +551,7 @@ export default function AccountPage() {
         .securityCard h2 {
           margin: 0 0 8px;
           color: #20253a;
-          font-size: 1.2rem;
+          font-size: var(--fs-h4);
           font-weight: 800;
         }
 
@@ -574,7 +574,7 @@ export default function AccountPage() {
         .passwordMessage {
           grid-column: 1 / -1;
           margin: 0;
-          font-size: 0.92rem;
+          font-size: var(--fs-md);
           font-weight: 600;
         }
 
@@ -614,7 +614,7 @@ export default function AccountPage() {
         }
 
         .field label {
-          font-size: 0.92rem;
+          font-size: var(--fs-md);
           font-weight: 700;
           color: #3a3f54;
         }

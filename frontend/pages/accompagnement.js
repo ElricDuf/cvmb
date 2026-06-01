@@ -1,11 +1,93 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import Layout from '../components/layout/Layout'
+import { PageContainer, PageHeader, Card } from '../components/ui'
+
+const EMPTY_FORM = {
+  companyName: '',
+  managerName: '',
+  phone: '',
+  workforce: '',
+  creationYear: '',
+  email: '',
+  city: '',
+  siret: '',
+  contactRequested: true,
+}
+
+// État de la recherche SIRENE : idle | loading | found | notfound | error
+const LOOKUP_MESSAGES = {
+  loading: 'Recherche de votre entreprise dans la base SIRENE…',
+  found: 'Champs pré-remplis depuis la base SIRENE. Vous pouvez les corriger si besoin.',
+  notfound: 'SIRET introuvable dans la base SIRENE. Saisissez les informations manuellement.',
+  error: 'La recherche automatique est indisponible. Saisissez les informations manuellement.',
+}
 
 export default function AccompagnementPage() {
   const router = useRouter()
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
+  const [values, setValues] = useState(EMPTY_FORM)
+  const [lookupStatus, setLookupStatus] = useState('idle')
+  // Mémorise le dernier SIRET interrogé pour éviter les appels redondants au blur
+  const lastLookupRef = useRef('')
+
+  const setField = (name, value) => {
+    setValues((prev) => ({ ...prev, [name]: value }))
+  }
+
+  const handleChange = (event) => {
+    const { name, value, type, checked } = event.target
+    setField(name, type === 'checkbox' ? checked : value)
+  }
+
+  const siretDigits = (values.siret || '').replace(/\D/g, '')
+  const canLookup = siretDigits.length === 14
+
+  const lookupSiret = async () => {
+    if (!canLookup || lookupStatus === 'loading') return
+    if (siretDigits === lastLookupRef.current && lookupStatus === 'found') return
+
+    lastLookupRef.current = siretDigits
+    setLookupStatus('loading')
+
+    try {
+      const response = await fetch(`/api/sirene/siret/${siretDigits}`)
+
+      if (!response.ok) {
+        // 404 : SIRET inconnu ; autre code (clé API absente, INSEE indispo…) : erreur
+        setLookupStatus(response.status === 404 ? 'notfound' : 'error')
+        return
+      }
+
+      const data = await response.json()
+      const ent = data && data.entreprise
+
+      if (!ent || ent.found === false) {
+        setLookupStatus('notfound')
+        return
+      }
+
+      // Pré-remplissage : on n'écrase un champ que si SIRENE renvoie une valeur,
+      // l'utilisateur reste libre de tout modifier ensuite (fallback manuel).
+      setValues((prev) => ({
+        ...prev,
+        companyName: ent.raisonSociale || prev.companyName,
+        workforce: ent.effectifLabel || prev.workforce,
+        creationYear: ent.anneeCreation || prev.creationYear,
+        city: ent.ville || prev.city,
+      }))
+      setLookupStatus('found')
+    } catch {
+      setLookupStatus('error')
+    }
+  }
+
+  const handleSiretBlur = () => {
+    if (canLookup && siretDigits !== lastLookupRef.current) {
+      lookupSiret()
+    }
+  }
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -36,17 +118,16 @@ export default function AccompagnementPage() {
     setError('')
 
     try {
-      const formData = new FormData(form)
       const payload = {
-        companyName: formData.get('companyName'),
-        managerName: formData.get('managerName'),
-        phone: formData.get('phone'),
-        workforce: formData.get('workforce'),
-        creationYear: formData.get('creationYear'),
-        email: formData.get('email'),
-        city: formData.get('city'),
-        siret: formData.get('siret'),
-        contactRequested: formData.get('contactRequested') === 'on',
+        companyName: values.companyName,
+        managerName: values.managerName,
+        phone: values.phone,
+        workforce: values.workforce,
+        creationYear: values.creationYear,
+        email: values.email,
+        city: values.city,
+        siret: values.siret,
+        contactRequested: Boolean(values.contactRequested),
         diagnostic: diagnosticPayload,
       }
 
@@ -83,18 +164,65 @@ export default function AccompagnementPage() {
 
   return (
     <Layout>
-      <section className="accompagnementPage">
-        <header className="hero">
-          <h1>Finalisez votre demande d&apos;accompagnement</h1>
-          <p>Un conseiller CCI reviendra vers vous pour approfondir votre diagnostic.</p>
-        </header>
+      <PageContainer width="wide">
+        <PageHeader
+          align="center"
+          title="Finalisez votre demande d'accompagnement"
+          lead="Renseignez votre SIRET pour pré-remplir automatiquement vos informations, ou saisissez-les manuellement."
+        />
 
-        <section className="formCard" aria-labelledby="accompagnement-title">
+        <Card as="section" padding="md" className="formCard" aria-labelledby="accompagnement-title">
           <form onSubmit={handleSubmit} className="requestForm" id="accompagnement-title">
             <label className="contactToggle">
-              <input type="checkbox" name="contactRequested" defaultChecked />
+              <input
+                type="checkbox"
+                name="contactRequested"
+                checked={values.contactRequested}
+                onChange={handleChange}
+              />
               <span>Souhaitez-vous être contacté par un conseiller de votre CCI ?</span>
             </label>
+
+            {/* --- Recherche SIRENE --- */}
+            <div className="siretLookup">
+              <label className="siretField">
+                <span className="labelRow">
+                  <span>SIRET</span>
+                  <span className="requiredMark" aria-hidden="true">*</span>
+                </span>
+                <div className="siretRow">
+                  <input
+                    type="text"
+                    name="siret"
+                    inputMode="numeric"
+                    maxLength={17}
+                    placeholder="14 chiffres"
+                    value={values.siret}
+                    onChange={handleChange}
+                    onBlur={handleSiretBlur}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="btn-secondary lookupButton"
+                    onClick={lookupSiret}
+                    disabled={!canLookup || lookupStatus === 'loading'}
+                  >
+                    {lookupStatus === 'loading' ? 'RECHERCHE…' : 'REMPLIR AUTOMATIQUEMENT'}
+                  </button>
+                </div>
+              </label>
+
+              <p
+                className={`lookupStatus ${lookupStatus}`}
+                role="status"
+                aria-live="polite"
+              >
+                {lookupStatus === 'idle'
+                  ? 'Astuce : saisissez votre SIRET (14 chiffres) pour remplir les champs automatiquement.'
+                  : LOOKUP_MESSAGES[lookupStatus]}
+              </p>
+            </div>
 
             <div className="fieldsGrid">
               <label>
@@ -102,28 +230,28 @@ export default function AccompagnementPage() {
                   <span>Raison sociale</span>
                   <span className="requiredMark" aria-hidden="true">*</span>
                 </span>
-                <input type="text" name="companyName" required />
+                <input type="text" name="companyName" value={values.companyName} onChange={handleChange} required />
               </label>
               <label>
                 <span className="labelRow">
                   <span>Nom et prénom du dirigeant</span>
                   <span className="requiredMark" aria-hidden="true">*</span>
                 </span>
-                <input type="text" name="managerName" required />
+                <input type="text" name="managerName" value={values.managerName} onChange={handleChange} required />
               </label>
               <label>
                 <span className="labelRow">
                   <span>Téléphone</span>
                   <span className="requiredMark" aria-hidden="true">*</span>
                 </span>
-                <input type="tel" name="phone" required />
+                <input type="tel" name="phone" value={values.phone} onChange={handleChange} required />
               </label>
               <label>
                 <span className="labelRow">
                   <span>Effectif de l&apos;entreprise</span>
                   <span className="requiredMark" aria-hidden="true">*</span>
                 </span>
-                <select name="workforce" required defaultValue="">
+                <select name="workforce" value={values.workforce} onChange={handleChange} required>
                   <option value="" disabled>
                     Sélectionner...
                   </option>
@@ -138,25 +266,18 @@ export default function AccompagnementPage() {
                   <span>Année de création de l&apos;entreprise</span>
                   <span className="requiredMark" aria-hidden="true">*</span>
                 </span>
-                <input type="number" name="creationYear" min="1900" max="2026" required />
+                <input type="number" name="creationYear" min="1900" max="2026" value={values.creationYear} onChange={handleChange} required />
               </label>
               <label>
                 <span className="labelRow">
                   <span>Email</span>
                   <span className="requiredMark" aria-hidden="true">*</span>
                 </span>
-                <input type="email" name="email" required />
+                <input type="email" name="email" value={values.email} onChange={handleChange} required />
               </label>
               <label>
                 Commune
-                <input type="text" name="city" />
-              </label>
-              <label>
-                <span className="labelRow">
-                  <span>SIRET</span>
-                  <span className="requiredMark" aria-hidden="true">*</span>
-                </span>
-                <input type="text" name="siret" inputMode="numeric" required />
+                <input type="text" name="city" value={values.city} onChange={handleChange} />
               </label>
             </div>
 
@@ -177,45 +298,13 @@ export default function AccompagnementPage() {
               </button>
             </div>
           </form>
-        </section>
-      </section>
+        </Card>
+      </PageContainer>
 
       <style jsx>{`
-        .accompagnementPage {
-          max-width: 1180px;
-          margin: 0 auto;
-          padding: 40px 24px 72px;
-        }
-
-        .hero {
-          text-align: center;
-          margin-bottom: 28px;
-        }
-
-        .hero h1 {
-          margin: 0;
-          color: #20232b;
-          font-size: clamp(2.1rem, 4.5vw, 3.15rem);
-          line-height: 1.02;
-          letter-spacing: -0.04em;
-          font-weight: 800;
-        }
-
-        .hero p {
-          margin: 14px auto 0;
-          max-width: 660px;
-          color: #676b77;
-          font-size: 1rem;
-        }
-
         .formCard {
-          max-width: 740px;
+          max-width: var(--content-narrow);
           margin: 0 auto;
-          background: rgba(255, 255, 255, 0.94);
-          border: 1px solid rgba(94, 100, 130, 0.08);
-          border-radius: 32px;
-          box-shadow: 0 26px 60px rgba(57, 69, 126, 0.12);
-          padding: 28px;
         }
 
         .requestForm {
@@ -228,9 +317,9 @@ export default function AccompagnementPage() {
           display: inline-flex;
           align-items: center;
           gap: 12px;
-          font-size: 0.95rem;
+          font-size: var(--fs-md);
           color: #2b2f3a;
-          font-weight: 500;
+          font-weight: var(--fw-medium);
         }
 
         .contactToggle input {
@@ -238,6 +327,72 @@ export default function AccompagnementPage() {
           height: 16px;
           accent-color: #3444f4;
         }
+
+        /* --- Bloc de recherche SIRENE --- */
+        .siretLookup {
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          padding: 16px 18px;
+          border: 1px solid rgba(49, 70, 245, 0.18);
+          border-radius: 16px;
+          background: rgba(231, 235, 255, 0.45);
+        }
+
+        .siretField {
+          display: flex;
+          flex-direction: column;
+          gap: 7px;
+          color: #2a2d36;
+          font-size: var(--fs-xs);
+          font-weight: var(--fw-semibold);
+          letter-spacing: 0.01em;
+        }
+
+        .siretRow {
+          display: flex;
+          gap: 10px;
+          align-items: stretch;
+        }
+
+        .siretRow input {
+          flex: 1;
+          min-width: 0;
+          height: 42px;
+          border: 0;
+          border-radius: var(--radius-input, 6px);
+          background: #fff;
+          color: #222633;
+          padding: 0 14px;
+          font: inherit;
+          outline: none;
+          box-shadow: inset 0 0 0 1px rgba(49, 70, 245, 0.16);
+          transition: box-shadow 0.18s ease;
+        }
+
+        .siretRow input:focus {
+          box-shadow: 0 0 0 3px rgba(49, 70, 245, 0.18);
+        }
+
+        .lookupButton {
+          min-width: auto;
+          height: 42px;
+          padding: 0 18px;
+          font-size: var(--fs-2xs);
+          white-space: nowrap;
+        }
+
+        .lookupStatus {
+          margin: 0;
+          font-size: var(--fs-sm);
+          line-height: var(--lh-snug);
+          color: var(--text-muted);
+        }
+
+        .lookupStatus.loading { color: var(--blue-primary); }
+        .lookupStatus.found   { color: #1a7f47; }
+        .lookupStatus.notfound,
+        .lookupStatus.error   { color: #b45309; }
 
         .fieldsGrid {
           display: grid;
@@ -250,8 +405,8 @@ export default function AccompagnementPage() {
           flex-direction: column;
           gap: 7px;
           color: #2a2d36;
-          font-size: 0.8rem;
-          font-weight: 600;
+          font-size: var(--fs-xs);
+          font-weight: var(--fw-semibold);
           letter-spacing: 0.01em;
         }
 
@@ -281,8 +436,7 @@ export default function AccompagnementPage() {
         }
 
         .fieldsGrid input:focus,
-        .fieldsGrid select:focus,
-        .readonlyField:focus-within {
+        .fieldsGrid select:focus {
           box-shadow: 0 0 0 3px rgba(49, 70, 245, 0.14);
           background: #ffffff;
         }
@@ -299,9 +453,9 @@ export default function AccompagnementPage() {
           gap: 12px;
           align-items: flex-start;
           margin-bottom: 18px;
-          color: #5e6270;
-          font-size: 0.9rem;
-          line-height: 1.45;
+          color: var(--text-muted);
+          font-size: var(--fs-md);
+          line-height: var(--lh-normal);
         }
 
         .infoIcon {
@@ -313,16 +467,16 @@ export default function AccompagnementPage() {
           color: #3444f4;
           display: grid;
           place-items: center;
-          font-size: 0.7rem;
-          font-weight: 700;
+          font-size: var(--fs-2xs);
+          font-weight: var(--fw-bold);
           margin-top: 2px;
         }
 
         .formError {
           margin: 0;
-          color: #b42318;
-          font-size: 0.92rem;
-          font-weight: 600;
+          color: var(--danger);
+          font-size: var(--fs-md);
+          font-weight: var(--fw-semibold);
         }
 
         .actions {
@@ -331,52 +485,17 @@ export default function AccompagnementPage() {
           padding-top: 4px;
         }
 
-        .submitButton {
-          min-width: 140px;
-          height: 46px;
-          padding: 0 28px;
-          border: 0;
-          border-radius: var(--radius-btn, 8px);
-          background: var(--btn-gradient, linear-gradient(180deg, #4a62ff 0%, #3146f5 100%));
-          color: #ffffff;
-          font-size: 0.94rem;
-          font-weight: 700;
-          letter-spacing: 0.04em;
-          box-shadow: var(--shadow-btn, 0 16px 28px rgba(49, 70, 245, 0.22));
-          cursor: pointer;
-          transition: filter 0.2s ease, transform 0.2s ease;
-        }
-
-        .submitButton:disabled {
-          opacity: 0.72;
-          cursor: progress;
-        }
-
-        .submitButton:hover:not(:disabled) {
-          filter: brightness(1.05);
-          transform: translateY(-1px);
-        }
-
         @media (max-width: 768px) {
-          .accompagnementPage {
-            padding: 28px 16px 56px;
-          }
-
-          .formCard {
-            padding: 18px;
-            border-radius: 24px;
-          }
-
           .fieldsGrid {
             grid-template-columns: 1fr;
           }
 
-          .hero {
-            margin-bottom: 18px;
+          .siretRow {
+            flex-direction: column;
           }
 
-          .hero p {
-            font-size: 0.96rem;
+          .lookupButton {
+            width: 100%;
           }
 
           .contactToggle {

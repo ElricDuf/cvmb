@@ -238,7 +238,7 @@ export default function EvaluatePage() {
 
         .formPanel h1 {
           margin: 0;
-          font-size: clamp(1.55rem, 2.8vw, 2.05rem);
+          font-size: var(--fs-h2);
           font-weight: 700;
           color: #1e1c28;
           letter-spacing: -0.02em;
@@ -258,7 +258,7 @@ export default function EvaluatePage() {
           display: inline-flex;
           align-items: center;
           gap: 6px;
-          font-size: 0.95rem;
+          font-size: var(--fs-md);
           font-weight: 400;
           color: #1f1d27;
           width: fit-content;
@@ -329,7 +329,7 @@ export default function EvaluatePage() {
           border-radius: 999px;
           background: transparent;
           color: #2b2a33;
-          font-size: 0.98rem;
+          font-size: var(--fs-md);
           font-weight: 400;
           cursor: pointer;
         }
@@ -423,7 +423,7 @@ export default function EvaluatePage() {
         .sectorName {
           display: block;
           margin-bottom: 8px;
-          font-size: 0.86rem;
+          font-size: var(--fs-sm);
           line-height: 1.25;
           font-weight: 400;
           color: #1f1d27;
@@ -431,7 +431,7 @@ export default function EvaluatePage() {
 
         .sectorDescription {
           display: block;
-          font-size: 0.78rem;
+          font-size: var(--fs-xs);
           line-height: 1.45;
           color: #22202d;
         }
@@ -450,7 +450,7 @@ export default function EvaluatePage() {
           border-radius: 6px;
           background: linear-gradient(180deg, #4a62ff 0%, #3146f5 100%);
           color: #fff;
-          font-size: 0.84rem;
+          font-size: var(--fs-sm);
           font-weight: 700;
           letter-spacing: 0.06em;
           box-shadow: 0 10px 22px rgba(49, 70, 245, 0.22);
@@ -485,7 +485,7 @@ export default function EvaluatePage() {
           }
 
           .formPanel h1 {
-            font-size: clamp(1.25rem, 6vw, 1.6rem);
+            font-size: var(--fs-h3);
           }
 
           .sectorGrid {
@@ -507,7 +507,7 @@ export default function EvaluatePage() {
           }
 
           .fieldLabelRow {
-            font-size: 0.95rem;
+            font-size: var(--fs-md);
           }
 
           .fieldLabelRow .labelIcon {

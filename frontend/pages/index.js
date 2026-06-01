@@ -188,7 +188,7 @@ export default function Home() {
 
           .eyebrow {
             margin: 0 0 10px;
-            font-size: 0.78rem;
+            font-size: var(--fs-xs);
             font-weight: 700;
             letter-spacing: 0.16em;
             text-transform: uppercase;
@@ -197,7 +197,7 @@ export default function Home() {
 
           .heroCopy h1 {
             margin: 0;
-            font-size: clamp(3rem, 7vw, 4.9rem);
+            font-size: var(--fs-display);
             line-height: 0.95;
             letter-spacing: -0.05em;
             color: #3146f5;
@@ -207,7 +207,7 @@ export default function Home() {
           .lead {
             margin: 18px 0 28px;
             max-width: 30rem;
-            font-size: 1.05rem;
+            font-size: var(--fs-lead);
             line-height: 1.65;
             color: #5e6274;
           }
@@ -256,7 +256,7 @@ export default function Home() {
           }
 
           .infoCard h2 {
-            font-size: 1.08rem;
+            font-size: var(--fs-lead);
             letter-spacing: 0.01em;
             color: #2b2a33;
           }
@@ -270,7 +270,7 @@ export default function Home() {
           .infoCard p {
             margin: 8px 0 0;
             line-height: 1.55;
-            font-size: 0.97rem;
+            font-size: var(--fs-md);
           }
 
           .sectionBlock {
@@ -285,7 +285,7 @@ export default function Home() {
           .sectionTitle {
             text-align: center;
             padding-top: 34px;
-            font-size: clamp(1.55rem, 3.2vw, 2.1rem);
+            font-size: var(--fs-h2);
             letter-spacing: -0.03em;
             color: #2a2831;
           }
@@ -319,7 +319,7 @@ export default function Home() {
             color: #fff;
             display: grid;
             place-items: center;
-            font-size: 1.05rem;
+            font-size: var(--fs-lead);
             font-weight: 700;
             box-shadow: 0 8px 18px rgba(53, 81, 242, 0.3);
           }
@@ -342,7 +342,7 @@ export default function Home() {
 
           .stepCard h3 {
             min-height: 3.4em;
-            font-size: 1rem;
+            font-size: var(--fs-base);
             line-height: 1.28;
             color: #292731;
             letter-spacing: 0.01em;
@@ -351,7 +351,7 @@ export default function Home() {
           .stepCard p {
             margin: 14px 0 0;
             line-height: 1.65;
-            font-size: 0.93rem;
+            font-size: var(--fs-md);
           }
 
           .ctaSection {
@@ -399,7 +399,7 @@ export default function Home() {
 
           .ctaKicker {
             margin: 0 0 16px;
-            font-size: clamp(1.1rem, 2.8vw, 1.7rem);
+            font-size: var(--fs-h3);
             font-weight: 800;
             letter-spacing: -0.04em;
             color: #3551f2;
@@ -407,7 +407,7 @@ export default function Home() {
           }
 
           .ctaOverlay h2 {
-            font-size: 0.98rem;
+            font-size: var(--fs-md);
             line-height: 1.65;
             font-weight: 400;
             margin-bottom: 24px;
@@ -441,7 +441,7 @@ export default function Home() {
             }
 
             .heroCopy h1 {
-              font-size: clamp(2.2rem, 13vw, 3.3rem);
+              font-size: var(--fs-h1);
             }
 
             .eyebrow {
@@ -450,7 +450,7 @@ export default function Home() {
 
             .lead {
               margin-bottom: 20px;
-              font-size: 0.98rem;
+              font-size: var(--fs-md);
             }
 
             .infoCard,
@@ -486,7 +486,7 @@ export default function Home() {
             }
 
             .ctaOverlay h2 {
-              font-size: 0.97rem;
+              font-size: var(--fs-md);
             }
           }
         `}</style>

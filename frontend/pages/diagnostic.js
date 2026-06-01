@@ -1,7 +1,13 @@
 import Link from 'next/link'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/router'
 import { useEffect, useMemo, useState } from 'react'
 import Layout from '../components/layout/Layout'
+
+const DiagnosticPdfButton = dynamic(
+  () => import('../components/DiagnosticPdfButton'),
+  { ssr: false }
+)
 
 const sectorLabels = {
   commerce: 'Commerce',
@@ -189,9 +195,9 @@ export default function DiagnosticPage() {
   const router = useRouter()
   const [diagnostic, setDiagnostic] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [accountSaveState, setAccountSaveState] = useState('idle')
-  const [accountSaveError, setAccountSaveError] = useState('')
+  const [error, setError] = useState("")
+  const [accountSaveState, setAccountSaveState] = useState("idle")
+  const [accountSaveError, setAccountSaveError] = useState("")
 
   const diagnosticId = useMemo(() => {
     const value = router.query.diagnosticId
@@ -207,7 +213,7 @@ export default function DiagnosticPage() {
 
     async function loadDiagnostic() {
       setLoading(true)
-      setError('')
+      setError("")
 
       try {
         const cachedValue = window.localStorage.getItem(storageKey)
@@ -226,7 +232,7 @@ export default function DiagnosticPage() {
             if (cachedDiagnostic) {
               setDiagnostic(cachedDiagnostic)
             } else {
-              setError('Aucun diagnostic récent n’est disponible. Lancez le questionnaire pour générer des résultats.')
+              setError("Aucun diagnostic récent n’est disponible. Lancez le questionnaire pour générer des résultats.")
             }
             setLoading(false)
           }
@@ -246,7 +252,7 @@ export default function DiagnosticPage() {
         }
       } catch (fetchError) {
         if (!cancelled) {
-          setError(fetchError.message || 'Impossible de charger le diagnostic calculé.')
+          setError(fetchError.message || "Impossible de charger le diagnostic calculé.")
         }
       } finally {
         if (!cancelled) {
@@ -263,15 +269,15 @@ export default function DiagnosticPage() {
   }, [router.isReady, diagnosticId])
 
   useEffect(() => {
-    if (typeof window === 'undefined' || !router.isReady || !diagnostic) {
+    if (typeof window === "undefined" || !router.isReady || !diagnostic) {
       return
     }
 
-    const savedSession = window.localStorage.getItem('cvmb:session')
+    const savedSession = window.localStorage.getItem("cvmb:session")
 
     if (!savedSession) {
-      setAccountSaveState('idle')
-      setAccountSaveError('')
+      setAccountSaveState("idle")
+      setAccountSaveError("")
       return
     }
 
@@ -280,21 +286,21 @@ export default function DiagnosticPage() {
     try {
       parsedSession = JSON.parse(savedSession)
     } catch {
-      setAccountSaveState('error')
+      setAccountSaveState("error")
       return
     }
 
     const userId = parsedSession?.user?.id
 
     if (!userId) {
-      setAccountSaveState('error')
+      setAccountSaveState("error")
       return
     }
 
     const sourceDiagnosticId = String(diagnosticId || diagnostic.id || '').trim()
 
     if (!sourceDiagnosticId) {
-      setAccountSaveState('error')
+      setAccountSaveState("error")
       return
     }
 
@@ -302,9 +308,9 @@ export default function DiagnosticPage() {
     const isPersistedId = Number.isInteger(alreadyPersistedId) && alreadyPersistedId > 0
     const saveMarkerKey = `cvmb:diagnosticSaved:${userId}:${sourceDiagnosticId}`
 
-    if (isPersistedId || window.localStorage.getItem(saveMarkerKey) === '1') {
-      setAccountSaveState('saved')
-      setAccountSaveError('')
+    if (isPersistedId || window.localStorage.getItem(saveMarkerKey) === "1") {
+      setAccountSaveState("saved")
+      setAccountSaveError("")
       return
     }
 
@@ -312,13 +318,13 @@ export default function DiagnosticPage() {
 
     async function persistDiagnosticToAccount() {
       try {
-        setAccountSaveState('saving')
-        setAccountSaveError('')
+        setAccountSaveState("saving")
+        setAccountSaveError("")
 
         let questionnaireContext = null
 
         try {
-          questionnaireContext = JSON.parse(window.localStorage.getItem('cvmb:questionnaireContext') || 'null')
+          questionnaireContext = JSON.parse(window.localStorage.getItem("cvmb:questionnaireContext") || "null")
         } catch {
           questionnaireContext = null
         }
@@ -351,7 +357,7 @@ export default function DiagnosticPage() {
               ? 'Endpoint de sauvegarde introuvable. Redémarrez le backend.'
               : `Erreur HTTP ${response.status}${response.statusText ? ` (${response.statusText})` : ''}.`
 
-            setAccountSaveState('error')
+            setAccountSaveState("error")
             setAccountSaveError(data?.error || fallbackError)
           }
           return
@@ -363,7 +369,7 @@ export default function DiagnosticPage() {
 
         const nextDiagnostic = data?.diagnostic || diagnostic
 
-        window.localStorage.setItem(saveMarkerKey, '1')
+        window.localStorage.setItem(saveMarkerKey, "1")
         window.localStorage.setItem(storageKey, JSON.stringify(nextDiagnostic))
 
         if (nextDiagnostic?.id) {
@@ -372,12 +378,12 @@ export default function DiagnosticPage() {
         }
 
         setDiagnostic(nextDiagnostic)
-        setAccountSaveState('saved')
-        setAccountSaveError('')
+        setAccountSaveState("saved")
+        setAccountSaveError("")
       } catch {
         if (!cancelled) {
-          setAccountSaveState('error')
-          setAccountSaveError('Erreur réseau ou serveur indisponible.')
+          setAccountSaveState("error")
+          setAccountSaveError("Erreur réseau ou serveur indisponible.")
         }
         return
       }
@@ -508,12 +514,17 @@ export default function DiagnosticPage() {
         <header className="hero">
           <h1>Diagnostic</h1>
           <p className="subtitle">Résultats calculés à partir des réponses de votre questionnaire.</p>
-          {accountSaveState === 'saving' ? <p className="accountSaveInfo saving">Enregistrement du diagnostic dans votre compte...</p> : null}
-          {accountSaveState === 'saved' ? <p className="accountSaveInfo saved">Diagnostic enregistré dans votre compte.</p> : null}
-          {accountSaveState === 'error' ? (
+          {diagnostic ? (
+            <div className="heroActions">
+              <DiagnosticPdfButton diagnostic={diagnostic} />
+            </div>
+          ) : null}
+          {accountSaveState === "saving" ? <p className="accountSaveInfo saving">Enregistrement du diagnostic dans votre compte...</p> : null}
+          {accountSaveState === "saved" ? <p className="accountSaveInfo saved">Diagnostic enregistré dans votre compte.</p> : null}
+          {accountSaveState === "error" ? (
             <p className="accountSaveInfo error">
-              Impossible d’enregistrer automatiquement ce diagnostic dans votre compte.
-              {accountSaveError ? ` ${accountSaveError}` : ''}
+              {"Impossible d’enregistrer automatiquement ce diagnostic dans votre compte."}
+              {accountSaveError ? ` ${accountSaveError}` : ""}
             </p>
           ) : null}
         </header>
@@ -581,17 +592,23 @@ export default function DiagnosticPage() {
           }
 
           .hero h1 {
-            font-size: clamp(2.5rem, 5vw, 3.5rem);
+            font-size: var(--fs-h1);
             color: var(--primary);
             font-weight: 800;
             letter-spacing: -0.02em;
           }
 
           .subtitle {
-            font-size: 1.125rem;
+            font-size: var(--fs-h4);
             margin-top: 12px;
             max-width: 600px;
             margin-inline: auto;
+          }
+
+          .heroActions {
+            display: flex;
+            justify-content: center;
+            margin-top: 20px;
           }
 
           .accountSaveInfo {
@@ -600,7 +617,7 @@ export default function DiagnosticPage() {
             max-width: 100%;
             padding: 8px 12px;
             border-radius: 999px;
-            font-size: 0.9rem;
+            font-size: var(--fs-md);
             font-weight: 600;
             line-height: 1.2;
             border: 1px solid transparent;
@@ -652,7 +669,7 @@ export default function DiagnosticPage() {
           }
 
           .fragility h2 {
-            font-size: 1.5rem;
+            font-size: var(--fs-h3);
           }
 
           .scoreRing {
@@ -677,7 +694,7 @@ export default function DiagnosticPage() {
 
           .percent {
             position: relative;
-            font-size: 1.75rem;
+            font-size: var(--fs-h2);
             font-weight: 800;
             color: #ef4444;
             display: flex;
@@ -687,7 +704,7 @@ export default function DiagnosticPage() {
           }
 
           .percent span {
-            font-size: 0.7rem;
+            font-size: var(--fs-2xs);
             font-weight: 700;
             color: var(--text-muted);
             margin-top: 4px;
@@ -719,14 +736,14 @@ export default function DiagnosticPage() {
             background: var(--primary);
             display: grid;
             place-items: center;
-            font-size: 1.7rem;
+            font-size: var(--fs-h2);
             font-weight: 800;
             color: white;
             box-shadow: 0 10px 20px rgba(49, 70, 245, 0.2);
           }
 
           .analysisBody h3 {
-            font-size: 1.75rem;
+            font-size: var(--fs-h2);
           }
 
           .adviceText {
@@ -751,7 +768,7 @@ export default function DiagnosticPage() {
             align-items: center;
             padding: 4px 10px;
             border-radius: 999px;
-            font-size: 0.78rem;
+            font-size: var(--fs-xs);
             font-weight: 700;
             color: #1e40af;
             background: #eff6ff;
@@ -788,7 +805,7 @@ export default function DiagnosticPage() {
 
           .pillarHeader h4 {
             margin: 0;
-            font-size: 1.1rem;
+            font-size: var(--fs-h4);
             flex: 1;
           }
 
@@ -799,7 +816,7 @@ export default function DiagnosticPage() {
             margin-top: 16px;
             padding-top: 14px;
             border-top: 1px solid #eef2f7;
-            font-size: 0.9rem;
+            font-size: var(--fs-md);
             color: var(--text-muted);
           }
 
@@ -813,7 +830,7 @@ export default function DiagnosticPage() {
           }
 
           .badge {
-            font-size: 0.75rem;
+            font-size: var(--fs-2xs);
             padding: 4px 10px;
             border-radius: 999px;
             font-weight: 700;
@@ -850,7 +867,7 @@ export default function DiagnosticPage() {
           }
 
           .emailForm h3 {
-            font-size: 1.5rem;
+            font-size: var(--fs-h3);
           }
 
           .contactForm {
@@ -866,7 +883,7 @@ export default function DiagnosticPage() {
             display: flex;
             flex-direction: column;
             text-align: left;
-            font-size: 0.9rem;
+            font-size: var(--fs-md);
             font-weight: 500;
             color: var(--text-main);
             flex: 1;
@@ -879,7 +896,7 @@ export default function DiagnosticPage() {
             padding: 12px 16px;
             border-radius: 8px;
             border: 1px solid #cbd5e1;
-            font-size: 1rem;
+            font-size: var(--fs-base);
             transition: all 0.2s;
             outline: none;
           }
@@ -897,7 +914,7 @@ export default function DiagnosticPage() {
             background: var(--primary);
             color: white;
             font-weight: 600;
-            font-size: 1rem;
+            font-size: var(--fs-base);
             cursor: pointer;
             transition: background 0.2s, transform 0.1s;
             text-decoration: none;
@@ -924,7 +941,7 @@ export default function DiagnosticPage() {
             padding: 0 32px;
             border-radius: 999px;
             text-decoration: none;
-            font-size: 1.125rem;
+            font-size: var(--fs-h4);
             box-shadow: 0 8px 16px rgba(49, 70, 245, 0.2);
           }
 
@@ -988,7 +1005,7 @@ export default function DiagnosticPage() {
             .primaryButton.large {
               text-align: center;
               justify-content: center;
-              font-size: 1rem;
+              font-size: var(--fs-base);
               padding: 0 20px;
             }
 

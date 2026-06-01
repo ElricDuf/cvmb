@@ -196,7 +196,7 @@ export default function LoginForm() {
 
         h2 {
           margin: 0;
-          font-size: 2rem;
+          font-size: var(--fs-h2);
           line-height: 1.1;
           letter-spacing: -0.04em;
           color: #26252f;
@@ -204,7 +204,7 @@ export default function LoginForm() {
 
         .subtitle {
           margin: 8px 0 28px;
-          font-size: 0.9rem;
+          font-size: var(--fs-md);
           color: #6e7283;
         }
 
@@ -216,7 +216,7 @@ export default function LoginForm() {
         .fieldGroup label {
           display: inline-flex;
           align-items: center;
-          font-size: 0.88rem;
+          font-size: var(--fs-sm);
           font-weight: 700;
           color: #34343d;
           margin-bottom: 6px;
@@ -237,7 +237,7 @@ export default function LoginForm() {
           padding: 0;
           border: 0;
           background: transparent;
-          font-size: 0.78rem;
+          font-size: var(--fs-xs);
           font-weight: 700;
           color: #3146f5;
           text-decoration: none;
@@ -279,7 +279,7 @@ export default function LoginForm() {
           outline: none;
           background: transparent;
           color: #24242d;
-          font-size: 0.94rem;
+          font-size: var(--fs-md);
         }
 
         input::placeholder {
@@ -303,7 +303,7 @@ export default function LoginForm() {
           align-items: center;
           gap: 10px;
           margin: 6px 0 28px;
-          font-size: 0.88rem;
+          font-size: var(--fs-sm);
           font-weight: 500;
           color: #5f6374;
           cursor: pointer;
@@ -348,7 +348,7 @@ export default function LoginForm() {
           border-radius: 999px;
           background: linear-gradient(180deg, #3e49ef 0%, #3146f5 100%);
           color: #ffffff;
-          font-size: 0.86rem;
+          font-size: var(--fs-sm);
           font-weight: 800;
           letter-spacing: 0.04em;
           box-shadow: 0 14px 24px rgba(49, 70, 245, 0.3);
@@ -363,7 +363,7 @@ export default function LoginForm() {
         .formError {
           margin: 14px 0 0;
           color: #b42318;
-          font-size: 0.86rem;
+          font-size: var(--fs-sm);
           font-weight: 600;
           text-align: left;
         }
@@ -380,7 +380,7 @@ export default function LoginForm() {
           }
 
           h2 {
-            font-size: 1.8rem;
+            font-size: var(--fs-h2);
           }
         }
       `}</style>

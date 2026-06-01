@@ -18,7 +18,7 @@
 
 .footerContent p {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: var(--fs-md);
   color: var(--text-muted, #5e6274);
 }
 
@@ -31,7 +31,7 @@
 .footerNav a {
   color: #24306f;
   text-decoration: none;
-  font-size: 0.95rem;
+  font-size: var(--fs-md);
   transition: color 0.15s ease;
 }
 

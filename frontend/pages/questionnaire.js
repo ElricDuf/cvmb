@@ -385,12 +385,12 @@ export default function QuestionnairePage() {
         .tabTitle {
           display: block;
           font-weight: 800;
-          font-size: 0.9rem;
+          font-size: var(--fs-md);
           margin-bottom: 4px;
         }
 
         .tabLabel {
-          font-size: 0.85rem;
+          font-size: var(--fs-sm);
           line-height: 1.3;
           display: block;
         }
@@ -398,7 +398,7 @@ export default function QuestionnairePage() {
         .tabMeta {
           display: inline-flex;
           margin-top: 8px;
-          font-size: 0.72rem;
+          font-size: var(--fs-2xs);
           letter-spacing: 0.04em;
           text-transform: uppercase;
           color: inherit;
@@ -413,7 +413,7 @@ export default function QuestionnairePage() {
           display: flex;
           justify-content: space-between;
           align-items: flex-end;
-          font-size: 0.75rem;
+          font-size: var(--fs-2xs);
           font-weight: 700;
           color: #8a8fa3;
           margin-bottom: 10px;
@@ -421,7 +421,7 @@ export default function QuestionnairePage() {
         }
 
         .percentage {
-          font-size: 1.4rem;
+          font-size: var(--fs-h3);
           color: #3551f2;
         }
 
@@ -453,7 +453,7 @@ export default function QuestionnairePage() {
           border-radius: 999px;
           background: rgba(53, 81, 242, 0.08);
           color: #3551f2;
-          font-size: 0.82rem;
+          font-size: var(--fs-xs);
           font-weight: 700;
         }
 
@@ -464,7 +464,7 @@ export default function QuestionnairePage() {
           background: none;
           border: none;
           color: #5e6274;
-          font-size: 0.75rem;
+          font-size: var(--fs-2xs);
           font-weight: 700;
           cursor: pointer;
           margin-bottom: 20px;
@@ -498,7 +498,7 @@ export default function QuestionnairePage() {
           align-items: center;
           padding: 6px 10px;
           border-radius: 999px;
-          font-size: 0.72rem;
+          font-size: var(--fs-2xs);
           font-weight: 700;
           letter-spacing: 0.04em;
           text-transform: uppercase;
@@ -516,7 +516,7 @@ export default function QuestionnairePage() {
 
         .questionHeader h2 {
           margin: 0;
-          font-size: 1.45rem;
+          font-size: var(--fs-h3);
           color: #1e1c28;
           font-weight: 700;
           line-height: 1.35;
@@ -572,7 +572,7 @@ export default function QuestionnairePage() {
         }
 
         .optionText {
-          font-size: 1.05rem;
+          font-size: var(--fs-lead);
           color: #1e1c28;
         }
 
@@ -587,7 +587,7 @@ export default function QuestionnairePage() {
           border: none;
           border-radius: 8px;
           font-weight: 700;
-          font-size: 0.9rem;
+          font-size: var(--fs-md);
           cursor: pointer;
         }
 
@@ -616,7 +616,7 @@ export default function QuestionnairePage() {
         .submitError {
           margin-top: 16px;
           color: #b42318;
-          font-size: 0.95rem;
+          font-size: var(--fs-md);
           text-align: center;
         }
 
@@ -631,7 +631,7 @@ export default function QuestionnairePage() {
 
         .completionTitle {
           margin-top: 0;
-          font-size: 1.3rem;
+          font-size: var(--fs-h3);
           font-weight: 700;
           color: #1e1c28;
         }
@@ -659,7 +659,7 @@ export default function QuestionnairePage() {
           }
 
           .questionHeader h2 {
-            font-size: 1.18rem;
+            font-size: var(--fs-h4);
           }
 
           .optionsList {
@@ -671,7 +671,7 @@ export default function QuestionnairePage() {
           }
 
           .optionText {
-            font-size: 0.98rem;
+            font-size: var(--fs-md);
           }
 
           .cardActions {

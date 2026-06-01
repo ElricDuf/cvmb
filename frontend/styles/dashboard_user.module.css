@@ -24,7 +24,7 @@
 .profileChip strong,
 .sidebarProfile strong {
   display: block;
-  font-size: 0.96rem;
+  font-size: var(--fs-md);
   font-weight: 700;
 }
 
@@ -32,7 +32,7 @@
 .sidebarProfile span {
   display: block;
   color: #82859a;
-  font-size: 0.82rem;
+  font-size: var(--fs-xs);
 }
 
 .avatar,
@@ -50,7 +50,7 @@
 
 .headerTitle {
   text-align: center;
-  font-size: clamp(1.2rem, 3vw, 2rem);
+  font-size: var(--fs-h2);
   font-weight: 800;
   letter-spacing: 0.02em;
   color: #2947f5;
@@ -101,7 +101,7 @@
 .sidebarAvatar {
   width: 28px;
   height: 28px;
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
 }
 
 .sidebarNav {
@@ -118,7 +118,7 @@
   border-radius: 18px;
   color: #4e536b;
   text-decoration: none;
-  font-size: 0.9rem;
+  font-size: var(--fs-md);
   font-weight: 500;
 }
 
@@ -157,7 +157,7 @@
 .panel h1,
 .panel h2 {
   margin: 0 0 18px;
-  font-size: 1rem;
+  font-size: var(--fs-base);
   font-weight: 700;
   color: #2d3142;
 }
@@ -211,7 +211,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.94rem;
+  font-size: var(--fs-md);
   color: #2a2f3d;
 }
 
@@ -223,14 +223,14 @@
 }
 
 .historyScore span {
-  font-size: 0.68rem;
+  font-size: var(--fs-2xs);
   font-weight: 700;
   letter-spacing: 0.06em;
   color: #a2a6b8;
 }
 
 .historyScore strong {
-  font-size: 0.94rem;
+  font-size: var(--fs-md);
   font-weight: 800;
   color: #2c3040;
 }
@@ -308,7 +308,7 @@
   }
 
   .headerTitle {
-    font-size: 1rem;
+    font-size: var(--fs-base);
   }
 
   .sidebar {

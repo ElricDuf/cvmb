@@ -10,14 +10,65 @@
  */
 const axios = require('axios')
 
-const SIRENE_BASE = process.env.SIRENE_API_BASE || 'https://api.insee.fr/entreprises/sirene/V3'
+// Portail actuel INSEE (par défaut) : https://api.insee.fr/api-sirene/3.11
+// Ancienne plateforme : https://api.insee.fr/entreprises/sirene/V3
+const SIRENE_BASE = process.env.SIRENE_API_BASE || 'https://api.insee.fr/api-sirene/3.11'
 
+/**
+ * Mappe un code "tranche d'effectif" INSEE vers l'une des options
+ * proposées dans le formulaire d'accompagnement.
+ * Codes INSEE : https://www.sirene.fr/sirene/public/variable/tefen
+ * @param {string|null} code
+ * @returns {string|null} Libellé compatible avec le <select> du formulaire
+ */
+function mapEffectifToWorkforce(code) {
+  if (!code) return null
+  const c = String(code).trim()
+  if (['00', '01', '02', '03'].includes(c)) return '1 à 9 salariés'
+  if (c === '11') return '10 à 19 salariés'
+  if (c === '12') return '20 à 49 salariés'
+  if (['21', '22', '31', '32', '41', '42', '51', '52', '53'].includes(c)) {
+    return '50 salariés et plus'
+  }
+  return null // NN ou inconnu : on laisse l'utilisateur choisir
+}
+
+/**
+ * Extrait l'année (YYYY) d'une date INSEE de la forme "YYYY-MM-DD".
+ * @param {string|null} dateStr
+ * @returns {string|null}
+ */
+function extractYear(dateStr) {
+  if (!dateStr) return null
+  const match = String(dateStr).match(/^(\d{4})/)
+  return match ? match[1] : null
+}
+
+/**
+ * Construit les en-têtes d'authentification selon le mode configuré.
+ * SIRENE_AUTH_MODE :
+ *   - 'apikey' (défaut) : portail actuel portail-api.insee.fr, plan « API Key ».
+ *                         La clé est envoyée dans l'en-tête X-INSEE-Api-Key-Integration.
+ *   - 'bearer'          : ancienne plateforme api.insee.fr (jeton OAuth2 en Authorization: Bearer).
+ * SIRENE_API_KEY_HEADER permet, en mode apikey, de surcharger le nom de l'en-tête si besoin.
+ */
 function _getAuthHeaders() {
   const key = process.env.SIRENE_API_KEY
   if (!key) {
     throw Object.assign(new Error('SIRENE_API_KEY not configured'), { statusCode: 500 })
   }
-  return { Authorization: `Bearer ${key}` }
+
+  const mode = (process.env.SIRENE_AUTH_MODE || 'apikey').toLowerCase()
+  const headers = { Accept: 'application/json' }
+
+  if (mode === 'bearer') {
+    headers.Authorization = `Bearer ${key}`
+  } else {
+    const headerName = process.env.SIRENE_API_KEY_HEADER || 'X-INSEE-Api-Key-Integration'
+    headers[headerName] = key
+  }
+
+  return headers
 }
 
 async function _fetch(url) {
@@ -33,20 +84,40 @@ async function getEntrepriseBySiret(siret) {
     const etab = data.etablissement || data
     const unite = data.uniteLegale || (etab && etab.uniteLegale) || null
 
-    const raisonSociale = (unite && (unite.denominationUniteLegale || unite.nomUniteLegale)) || null
-    const codePostal = (etab && (etab.adresseEtablissement?.codePostalEtablissement || etab.adresseEtablissement?.codePostal)) || null
-    const activitePrincipale = etab?.activitePrincipaleUniteLegale || etab?.activitePrincipale || (unite && unite.activitePrincipaleUniteLegale) || null
+    const adresse = (etab && etab.adresseEtablissement) || {}
+
+    const raisonSociale =
+      (unite && (unite.denominationUniteLegale || unite.nomUniteLegale)) ||
+      // Entreprise individuelle : reconstituer prénom + nom
+      [unite?.prenomUsuelUniteLegale || unite?.prenom1UniteLegale, unite?.nomUniteLegale]
+        .filter(Boolean)
+        .join(' ')
+        .trim() ||
+      null
+    const codePostal = adresse.codePostalEtablissement || adresse.codePostal || null
+    const ville = adresse.libelleCommuneEtablissement || adresse.libelleCommune || null
+    const activitePrincipale =
+      etab?.activitePrincipaleUniteLegale ||
+      etab?.activitePrincipale ||
+      (unite && unite.activitePrincipaleUniteLegale) ||
+      null
     const trancheEffectif = unite?.trancheEffectifsUniteLegale || unite?.trancheEffectifUniteLegale || null
+    const anneeCreation = extractYear(
+      unite?.dateCreationUniteLegale || etab?.dateCreationEtablissement || null,
+    )
 
     return {
       siret: etab?.siret || String(siret).replace(/\D/g, ''),
       siren: etab?.siren || (unite && unite.siren) || null,
       raisonSociale,
       codePostal,
+      ville,
       activitePrincipale,
       trancheEffectif,
+      effectifLabel: mapEffectifToWorkforce(trancheEffectif),
+      anneeCreation,
       raw: data,
-      found: true
+      found: true,
     }
   } catch (err) {
     if (err.response && err.response.status === 404) {
@@ -74,13 +145,16 @@ async function getEntrepriseBySiren(siren) {
 
     const raisonSociale = (unite && (unite.denominationUniteLegale || unite.nomUniteLegale)) || null
     const trancheEffectif = unite?.trancheEffectifsUniteLegale || unite?.trancheEffectifUniteLegale || null
+    const anneeCreation = extractYear(unite?.dateCreationUniteLegale || null)
 
     return {
       siren: unite?.siren || String(siren).replace(/\D/g, ''),
       raisonSociale,
       trancheEffectif,
+      effectifLabel: mapEffectifToWorkforce(trancheEffectif),
+      anneeCreation,
       raw: data,
-      found: true
+      found: true,
     }
   } catch (err) {
     if (err.response && err.response.status === 404) {
@@ -96,4 +170,6 @@ async function getEntrepriseBySiren(siren) {
 module.exports = {
   getEntrepriseBySiret,
   getEntrepriseBySiren,
+  mapEffectifToWorkforce,
+  extractYear,
 }
