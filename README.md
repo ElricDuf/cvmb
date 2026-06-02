@@ -8,37 +8,23 @@ Stack
 
 Quick start
 
-1. Start PostgreSQL locally with Docker:
+1. Install dependencies:
 
 ```bash
-podman compose up -d postgres
-```
-
-2. The backend is already configured to use `postgresql://cvmb:cvmb@localhost:5432/cvmb?schema=public`.
-2. Install dependencies:
-
-```bash
-cd frontend
-npm install
-cd ../backend
 npm install
 ```
 
-3. Initialize Prisma (from `backend`):
+2. Start everything in one command:
 
 ```bash
-npx prisma generate
-npx prisma migrate dev --name init
+npm run dev:quick
 ```
 
-4. Run apps:
+That starts PostgreSQL, applies the backend prep step, seeds the DB if needed,
+then launches the backend on `http://localhost:4000` and the frontend on
+`http://localhost:3000`.
 
-```bash
-npm run dev
-```
-
-This single command starts the backend first, then launches the frontend once the API is ready.
-On a fresh database, it also runs migrations and seeders automatically before starting the API.
+If you already have PostgreSQL running, `npm run dev` is enough.
 
 Files of interest
 - frontend

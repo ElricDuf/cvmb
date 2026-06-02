@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/router'
 import Layout from '../components/layout/Layout'
 import { PageContainer, PageHeader, Card } from '../components/ui'
@@ -88,6 +88,31 @@ export default function AccompagnementPage() {
       lookupSiret()
     }
   }
+
+  // Mémorisation : récupère le SIRET saisi avant le questionnaire pour le pré-remplir ici.
+  const autoLookupDoneRef = useRef(false)
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const ctx = JSON.parse(window.localStorage.getItem('cvmb:questionnaireContext') || 'null')
+      const savedSiret = (ctx?.siret || '').replace(/\D/g, '')
+      if (savedSiret.length === 14) {
+        setField('siret', savedSiret)
+      }
+    } catch {
+      /* ignore */
+    }
+  }, [])
+
+  // Lance automatiquement la recherche SIRENE une fois le SIRET mémorisé pré-rempli.
+  useEffect(() => {
+    if (autoLookupDoneRef.current) return
+    if (siretDigits.length === 14 && lookupStatus === 'idle') {
+      autoLookupDoneRef.current = true
+      lookupSiret()
+    }
+  }, [siretDigits, lookupStatus])
 
   const handleSubmit = async (event) => {
     event.preventDefault()

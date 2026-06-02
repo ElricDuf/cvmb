@@ -10,8 +10,9 @@
     "db:migrate:dev": "npx prisma migrate dev --name init",
     "db:seed": "node prisma/seed.js",
     "db:seed:recommendations": "node prisma/seed-recommendations.js",
+    "db:seed:admins": "node prisma/seed-admins.js",
     "prepare-db": "node prisma/prepare-db.js",
-    "setup-db": "npx prisma migrate deploy && node prisma/seed.js",
+    "setup-db": "npx prisma migrate deploy && node prisma/seed.js && node prisma/seed-admins.js",
     "reset-db": "npx prisma migrate reset --force && node prisma/seed.js"
   },
   "dependencies": {

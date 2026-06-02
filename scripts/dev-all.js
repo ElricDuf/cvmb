@@ -81,10 +81,18 @@ function startFrontend() {
   }
 
   frontendStarted = true
-  frontendProcess = startProcess('frontend', npmCommand, ['--prefix', 'frontend', 'run', 'dev'])
 
-  frontendProcess.on('exit', (code) => {
-    shutdown(code ?? 0)
+  isPortOpen(3000).then((frontendAlreadyRunning) => {
+    if (frontendAlreadyRunning) {
+      console.log('Frontend already running on http://localhost:3000, reusing it.')
+      return
+    }
+
+    frontendProcess = startProcess('frontend', npmCommand, ['--prefix', 'frontend', 'run', 'dev'])
+
+    frontendProcess.on('exit', (code) => {
+      shutdown(code ?? 0)
+    })
   })
 }
 

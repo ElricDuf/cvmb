@@ -121,18 +121,31 @@ export default function EvaluatePage() {
   const router = useRouter()
   const [companySize, setCompanySize] = useState('TPE')
   const [selectedSector, setSelectedSector] = useState('artisan')
+  const [siret, setSiret] = useState('')
+  const [siretError, setSiretError] = useState('')
+
+  const handleSiretChange = (event) => {
+    // On ne conserve que les chiffres, limités à 14
+    const digits = event.target.value.replace(/\D/g, '').slice(0, 14)
+    setSiret(digits)
+    if (siretError) setSiretError('')
+  }
 
   const handleSubmit = (event) => {
     event.preventDefault()
 
-    const formData = new FormData(event.currentTarget)
-    const siret = String(formData.get('siret') || '').trim().replace(/\D/g, '')
+    const digits = siret.replace(/\D/g, '')
+
+    if (digits.length !== 14) {
+      setSiretError('Le SIRET est obligatoire et doit comporter 14 chiffres.')
+      return
+    }
 
     if (typeof window !== 'undefined') {
       window.localStorage.setItem(
         'cvmb:questionnaireContext',
         JSON.stringify({
-          siret,
+          siret: digits,
           size: companySize,
           sector: selectedSector,
         }),
@@ -158,12 +171,32 @@ export default function EvaluatePage() {
             <div className="fieldBlock">
               <label htmlFor="siret" className="fieldLabelRow">
                 <span className="labelText">Numéro de SIRET</span>
+                <span className="requiredMark" aria-hidden="true">*</span>
                 <InfoIcon />
               </label>
-              <input id="siret" name="siret" type="text" inputMode="numeric" autoComplete="off" aria-describedby="siret-help" />
+              <input
+                id="siret"
+                name="siret"
+                type="text"
+                inputMode="numeric"
+                autoComplete="off"
+                maxLength={14}
+                placeholder="14 chiffres"
+                value={siret}
+                onChange={handleSiretChange}
+                required
+                aria-required="true"
+                aria-invalid={Boolean(siretError)}
+                aria-describedby="siret-help siret-error"
+              />
               <p id="siret-help" className="srOnly">
-                Saisissez le numéro de SIRET de l’entreprise.
+                Saisissez le numéro de SIRET de l’entreprise (14 chiffres).
               </p>
+              {siretError ? (
+                <p id="siret-error" className="fieldError" role="alert">
+                  {siretError}
+                </p>
+              ) : null}
             </div>
 
             <div className="sizeSwitch" role="group" aria-label="Taille de l’entreprise">
@@ -455,6 +488,18 @@ export default function EvaluatePage() {
           letter-spacing: 0.06em;
           box-shadow: 0 10px 22px rgba(49, 70, 245, 0.22);
           cursor: pointer;
+        }
+
+        .requiredMark {
+          color: #e11d48;
+          font-weight: 700;
+        }
+
+        .fieldError {
+          margin: 6px 0 0;
+          color: var(--danger);
+          font-size: var(--fs-sm);
+          font-weight: var(--fw-semibold);
         }
 
         .srOnly {

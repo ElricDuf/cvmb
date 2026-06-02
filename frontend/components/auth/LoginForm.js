@@ -86,6 +86,12 @@ export default function LoginForm() {
         return
       }
 
+      const role = data.user?.role
+      if (role === 'admin_local' || role === 'admin_national') {
+        await router.push('/admin/questionnaires')
+        return
+      }
+
       await router.push('/dashboard_user')
     } catch (submitError) {
       setError(submitError.message || 'Connexion impossible.')

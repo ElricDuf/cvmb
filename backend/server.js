@@ -5,6 +5,8 @@ const cors = require('cors')
 const { randomUUID, randomBytes, scryptSync, timingSafeEqual } = require('crypto')
 const { PrismaClient } = require('@prisma/client')
 const { getEntrepriseBySiret, getEntrepriseBySiren } = require('./sirene')
+const { signToken } = require('./auth')
+const createAdminRouter = require('./routes/admin')
 
 const app = express()
 const port = process.env.PORT || 4000
@@ -1336,14 +1338,32 @@ app.post('/api/auth/login', async (req, res, next) => {
       data: { derniere_connexion: new Date() },
     })
 
+    const token = signToken({
+      id: utilisateur.id,
+      role: utilisateur.role,
+      cciId: utilisateur.cci_id,
+      email: utilisateur.email,
+    })
+
     return res.json({
+      token,
       user: {
         id: utilisateur.id,
         email: utilisateur.email,
         prenom: utilisateur.prenom,
         nom: utilisateur.nom,
         role: utilisateur.role,
+        cciId: utilisateur.cci_id,
       },
+      cci: utilisateur.cci
+        ? {
+            id: utilisateur.cci.id,
+            nom: utilisateur.cci.nom,
+            code: utilisateur.cci.code,
+            region: utilisateur.cci.region,
+            estNational: utilisateur.cci.est_national,
+          }
+        : null,
       entreprise: utilisateur.entreprises[0]
         ? {
             id: utilisateur.entreprises[0].id,
@@ -1593,6 +1613,9 @@ app.post('/api/entreprises/sirene/import', async (req, res, next) => {
     next(error)
   }
 })
+
+// Routes de l'espace gestionnaire (admin local) et super-admin (admin national).
+app.use('/api/admin', createAdminRouter(prisma, { hashPassword, generateTemporaryPassword }))
 
 app.use((error, req, res, next) => {
   console.error(error)
