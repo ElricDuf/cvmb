@@ -69,11 +69,12 @@ export default function AdminLayout({ active, children }) {
           <span>BORDEAUX<br />GIRONDE</span>
         </a>
         <span className="brandTitle">COMMENT VA MA BOÎTE ?</span>
-        <button type="button" className="accountIcon" onClick={handleLogout} aria-label="Déconnexion" title="Déconnexion">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="8" r="3.2" fill="none" stroke="currentColor" strokeWidth="1.7" />
-            <path d="M5.5 19c1.3-3 4-4.6 6.5-4.6S17.2 16 18.5 19" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" />
+        <button type="button" className="logoutBtn" onClick={handleLogout}>
+          <svg viewBox="0 0 24 24" aria-hidden="true" className="logoutIco">
+            <path d="M15 12H3m0 0l3-3m-3 3l3 3" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+            <path d="M9 7V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-8a2 2 0 0 1-2-2v-2" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
           </svg>
+          Déconnexion
         </button>
       </header>
 
@@ -119,8 +120,9 @@ export default function AdminLayout({ active, children }) {
         .cciBadge { display: inline-flex; align-items: center; gap: 8px; justify-self: start; text-decoration: none; color: #1c2bb5; font-size: 11px; font-weight: 800; line-height: 1.05; }
         .cciBadgeMark { display: grid; place-items: center; width: 34px; height: 26px; border-radius: 7px; background: #2433c4; color: #fff; font-size: 12px; }
         .brandTitle { justify-self: center; font-size: 22px; font-weight: 800; letter-spacing: 0.02em; color: #2433d6; white-space: nowrap; }
-        .accountIcon { justify-self: end; width: 38px; height: 38px; border-radius: 50%; border: 1px solid #e2e4ee; background: #fff; color: #2433d6; cursor: pointer; display: grid; place-items: center; }
-        .accountIcon svg { width: 22px; height: 22px; }
+        .logoutBtn { justify-self: end; display: inline-flex; align-items: center; gap: 8px; padding: 8px 18px; border-radius: 999px; border: 1px solid #e2e4ee; background: #fff; color: #e53935; font-size: var(--fs-sm); font-weight: 700; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+        .logoutBtn:hover { background: #fff5f5; border-color: #e53935; }
+        .logoutIco { width: 18px; height: 18px; flex-shrink: 0; }
 
         .navCard { display: flex; align-items: center; gap: 24px; margin: -1px 0 0; padding: 16px 32px; background: #fff; border-bottom: 1px solid #eceef4; box-shadow: 0 18px 30px -28px rgba(36, 51, 120, 0.5); }
         .profile { display: flex; align-items: center; gap: 12px; min-width: 200px; }

@@ -3,6 +3,7 @@ import { useRouter } from 'next/router'
 import Link from 'next/link'
 import Layout from '../components/layout/Layout'
 import styles from '../styles/dashboard_user.module.css'
+import { authFetch } from '../lib/api'
 
 const historyStorageKey = 'cvmb:session'
 
@@ -245,7 +246,7 @@ export default function DashboardUserPage() {
       setError('')
 
       try {
-        const response = await fetch(`/api/users/${parsedSession.user.id}/questionnaires`)
+        const response = await authFetch(`/api/users/${parsedSession.user.id}/questionnaires`)
         const data = await response.json()
 
         if (!response.ok) {

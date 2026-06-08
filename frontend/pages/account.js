@@ -3,6 +3,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/router'
 import Layout from '../components/layout/Layout'
 import styles from '../styles/dashboard_user.module.css'
+import { authFetch } from '../lib/api'
 
 function SidebarIcon({ type }) {
   if (type === 'history') {
@@ -141,7 +142,7 @@ export default function AccountPage() {
           setAccountError('')
 
           try {
-            const response = await fetch(`/api/account/${parsedSession.user.id}`)
+            const response = await authFetch(`/api/account/${parsedSession.user.id}`)
             const data = await response.json()
 
             if (!response.ok) {
@@ -282,7 +283,7 @@ export default function AccountPage() {
     setAccountSuccess('')
 
     try {
-      const response = await fetch(`/api/account/${session.user.id}`, {
+      const response = await authFetch(`/api/account/${session.user.id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

@@ -1,6 +1,18 @@
 import { useRouter } from 'next/router'
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Layout from '../components/layout/Layout'
+
+// Identifiants de secteurs reconnus par le formulaire (et renvoyés par l'API SIRENE)
+const KNOWN_SECTORS = ['merchant', 'artisan', 'liberal', 'industrial', 'services']
+
+// État de la recherche SIRENE : idle | loading | found | partial | notfound | error
+const LOOKUP_MESSAGES = {
+  loading: 'Recherche de votre entreprise dans la base SIRENE…',
+  found: 'Taille et secteur pré-remplis depuis la base SIRENE. Vous pouvez les corriger.',
+  partial: 'Entreprise trouvée. Vérifiez la taille et le secteur, puis corrigez si besoin.',
+  notfound: 'SIRET introuvable dans la base SIRENE. Sélectionnez la taille et le secteur manuellement.',
+  error: 'Recherche automatique indisponible. Sélectionnez la taille et le secteur manuellement.',
+}
 
 const sectorOptions = [
   {
@@ -123,13 +135,81 @@ export default function EvaluatePage() {
   const [selectedSector, setSelectedSector] = useState('artisan')
   const [siret, setSiret] = useState('')
   const [siretError, setSiretError] = useState('')
+  const [lookupStatus, setLookupStatus] = useState('idle')
+  // Mémorise le dernier SIRET interrogé pour éviter les appels redondants
+  const lastLookupRef = useRef('')
 
   const handleSiretChange = (event) => {
     // On ne conserve que les chiffres, limités à 14
     const digits = event.target.value.replace(/\D/g, '').slice(0, 14)
     setSiret(digits)
     if (siretError) setSiretError('')
+    // Si le SIRET change après un remplissage, on réinitialise le statut
+    if (digits !== lastLookupRef.current) {
+      setLookupStatus('idle')
+    }
   }
+
+  // Interroge SIRENE et pré-remplit taille (TPE/PME) + secteur, sans bloquer
+  // la modification manuelle (ce sont de simples valeurs initiales modifiables).
+  const lookupSiret = async (raw) => {
+    const digits = (raw ?? siret).replace(/\D/g, '')
+    if (digits.length !== 14 || lookupStatus === 'loading') return
+    if (digits === lastLookupRef.current && lookupStatus !== 'idle') return
+
+    lastLookupRef.current = digits
+    setLookupStatus('loading')
+
+    try {
+      const response = await fetch(`/api/sirene/siret/${digits}`)
+
+      if (!response.ok) {
+        setLookupStatus(response.status === 404 ? 'notfound' : 'error')
+        return
+      }
+
+      const data = await response.json()
+      const ent = data && data.entreprise
+
+      if (!ent || ent.found === false) {
+        setLookupStatus('notfound')
+        return
+      }
+
+      let filledTaille = false
+      let filledSecteur = false
+
+      if (ent.tailleEntreprise === 'TPE' || ent.tailleEntreprise === 'PME') {
+        setCompanySize(ent.tailleEntreprise)
+        filledTaille = true
+      }
+      if (ent.secteur && KNOWN_SECTORS.includes(ent.secteur)) {
+        setSelectedSector(ent.secteur)
+        filledSecteur = true
+      }
+
+      // 'found' si les deux ont été déduits, sinon 'partial' (l'utilisateur complète)
+      setLookupStatus(filledTaille && filledSecteur ? 'found' : 'partial')
+    } catch {
+      setLookupStatus('error')
+    }
+  }
+
+  const handleSiretBlur = () => {
+    const digits = siret.replace(/\D/g, '')
+    if (digits.length === 14 && digits !== lastLookupRef.current) {
+      lookupSiret(digits)
+    }
+  }
+
+  // Déclenche automatiquement la recherche dès que 14 chiffres sont saisis.
+  useEffect(() => {
+    const digits = siret.replace(/\D/g, '')
+    if (digits.length === 14 && lookupStatus === 'idle') {
+      lookupSiret(digits)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [siret, lookupStatus])
 
   const handleSubmit = (event) => {
     event.preventDefault()
@@ -184,19 +264,30 @@ export default function EvaluatePage() {
                 placeholder="14 chiffres"
                 value={siret}
                 onChange={handleSiretChange}
+                onBlur={handleSiretBlur}
                 required
                 aria-required="true"
                 aria-invalid={Boolean(siretError)}
-                aria-describedby="siret-help siret-error"
+                aria-describedby="siret-help siret-error siret-lookup"
               />
               <p id="siret-help" className="srOnly">
-                Saisissez le numéro de SIRET de l’entreprise (14 chiffres).
+                Saisissez le numéro de SIRET de l’entreprise (14 chiffres). La taille et le secteur seront pré-remplis automatiquement.
               </p>
               {siretError ? (
                 <p id="siret-error" className="fieldError" role="alert">
                   {siretError}
                 </p>
               ) : null}
+              <p
+                id="siret-lookup"
+                className={`lookupStatus ${lookupStatus}`}
+                role="status"
+                aria-live="polite"
+              >
+                {lookupStatus === 'idle'
+                  ? 'Astuce : saisissez votre SIRET (14 chiffres) pour pré-remplir la taille et le secteur.'
+                  : LOOKUP_MESSAGES[lookupStatus]}
+              </p>
             </div>
 
             <div className="sizeSwitch" role="group" aria-label="Taille de l’entreprise">
@@ -501,6 +592,19 @@ export default function EvaluatePage() {
           font-size: var(--fs-sm);
           font-weight: var(--fw-semibold);
         }
+
+        .lookupStatus {
+          margin: 6px 0 0;
+          font-size: var(--fs-sm);
+          line-height: var(--lh-snug, 1.3);
+          color: var(--text-muted, #6b7082);
+        }
+
+        .lookupStatus.loading { color: var(--blue-primary, #3146f5); }
+        .lookupStatus.found,
+        .lookupStatus.partial { color: #1a7f47; }
+        .lookupStatus.notfound,
+        .lookupStatus.error { color: #b45309; }
 
         .srOnly {
           position: absolute;

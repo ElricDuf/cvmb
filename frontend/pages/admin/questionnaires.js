@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import Link from 'next/link'
 import AdminLayout from '../../components/admin/AdminLayout'
 import { ProgressBar } from '../../components/admin/Charts'
 import { adminFetch, buildQuery, getToken, readSession } from '../../lib/adminApi'
@@ -210,7 +211,9 @@ export default function AdminQuestionnaires() {
                     <td className="muted">{formatDate(r.date)}</td>
                     <td>
                       <div className="actions">
-                        <button type="button" onClick={() => setDetail(r)} aria-label="Voir"><ActionIcon type="eye" /></button>
+                        <Link href={`/diagnostic?diagnosticId=${r.id}`} aria-label="Voir le diagnostic" title="Voir le diagnostic">
+                          <ActionIcon type="eye" />
+                        </Link>
                         <button type="button" onClick={() => setDetail(r)} aria-label="Détails"><ActionIcon type="info" /></button>
                         <a href={`/admin/statistiques`} aria-label="Statistiques"><ActionIcon type="stats" /></a>
                         <span className={`rdv ${r.hasRendezVous ? 'rdvOn' : ''}`}>RDV</span>

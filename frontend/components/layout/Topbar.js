@@ -100,9 +100,11 @@ export default function Topbar() {
           </a>
         </div>
 
-        <Link href="/evaluate" className={styles.evaluateButton}>
-          S’évaluer
-        </Link>
+        {router.pathname !== "/questionnaire" ? (
+          <Link href="/evaluate" className={styles.evaluateButton}>
+            S’évaluer
+          </Link>
+        ) : null}
 
         <div className={styles.accountActions} ref={accountMenuRef}>
           {session ? (

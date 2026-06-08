@@ -10,26 +10,68 @@ import {
   StyleSheet,
 } from '@react-pdf/renderer'
 
-/* ─── Palette ─────────────────────────────────────────── */
-const BLUE      = '#3146f5'
-const BLUE_LIGHT = '#e7ebff'
-const MUTED     = '#5e6274'
-const DARK      = '#20232b'
-const WHITE     = '#ffffff'
-const BORDER    = '#e2e8f0'
+/* ─── Palette ──────────────────────────────────────────── */
+const BLUE       = '#3146f5'
+const BLUE_LIGHT = '#eff6ff'
+const BLUE_BG    = '#e7ebff'
+const MUTED      = '#64748b'
+const DARK       = '#1e293b'
+const WHITE      = '#ffffff'
+const BORDER     = '#e2e8f0'
+const BG_PAGE    = '#f8fafc'
+const BG_CARD    = '#ffffff'
 
-/* ─── Styles ──────────────────────────────────────────── */
+const TONE = {
+  red:    { bg: '#fef2f2', text: '#dc2626', border: '#fee2e2', bar: '#ef4444' },
+  orange: { bg: '#fff7ed', text: '#c2410c', border: '#ffedd5', bar: '#f97316' },
+  green:  { bg: '#f0fdf4', text: '#15803d', border: '#dcfce7', bar: '#16a34a' },
+  blue:   { bg: '#eff6ff', text: '#1d4ed8', border: '#dbeafe', bar: '#3146f5' },
+}
+
+function getTone(tone) {
+  return TONE[tone] || TONE.blue
+}
+
+function barColor(pct) {
+  if (pct >= 75) return '#16a34a'
+  if (pct >= 50) return '#3146f5'
+  if (pct >= 25) return '#f97316'
+  return '#ef4444'
+}
+
+function ringColor(tone) {
+  if (tone === 'red')    return '#ef4444'
+  if (tone === 'orange') return '#f97316'
+  if (tone === 'green')  return '#16a34a'
+  return '#2563eb'
+}
+
+function formatDate() {
+  return new Intl.DateTimeFormat('fr-FR', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  }).format(new Date())
+}
+
+const sectorLabels = {
+  commerce: 'Commerce', artisan: 'Artisanat',
+  liberal: 'Professions liberales', industrial: 'Industrie', services: 'Services',
+}
+const sizeLabels = { TPE: 'TPE', PME: 'PME' }
+
+/* ─── Styles ───────────────────────────────────────────── */
 const s = StyleSheet.create({
   page: {
     fontFamily: 'Helvetica',
-    backgroundColor: '#f7f7fc',
-    paddingBottom: 48,
+    backgroundColor: BG_PAGE,
+    paddingBottom: 52,
   },
 
-  /* Header */
+  /* ── Header ── */
   header: {
     backgroundColor: BLUE,
-    padding: '24 32 20',
+    paddingTop: 22,
+    paddingBottom: 18,
+    paddingHorizontal: 32,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -40,8 +82,8 @@ const s = StyleSheet.create({
     gap: 10,
   },
   headerBadge: {
-    width: 36,
-    height: 36,
+    width: 34,
+    height: 34,
     borderRadius: 8,
     backgroundColor: WHITE,
     alignItems: 'center',
@@ -64,197 +106,290 @@ const s = StyleSheet.create({
     fontSize: 9,
     marginTop: 2,
   },
+  headerRight: {
+    alignItems: 'flex-end',
+    gap: 3,
+  },
   headerDate: {
-    color: 'rgba(255,255,255,0.75)',
-    fontSize: 9,
-    textAlign: 'right',
+    color: 'rgba(255,255,255,0.8)',
+    fontSize: 8.5,
+  },
+  headerChip: {
+    color: 'rgba(255,255,255,0.9)',
+    fontSize: 8,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    marginTop: 4,
   },
 
-  /* Body */
+  /* ── Body ── */
   body: {
-    padding: '24 32 0',
+    paddingHorizontal: 32,
+    paddingTop: 24,
   },
 
-  /* Hero score */
-  heroRow: {
+  /* ── Top cards row (fragilite + radar) ── */
+  topRow: {
     flexDirection: 'row',
     gap: 16,
     marginBottom: 20,
   },
-  heroCard: {
-    flex: 1,
-    backgroundColor: WHITE,
-    borderRadius: 12,
-    padding: '20 24',
+  card: {
+    backgroundColor: BG_CARD,
+    borderRadius: 14,
+    padding: '18 20',
     border: `1 solid ${BORDER}`,
   },
-  heroLabel: {
-    fontSize: 8,
-    fontFamily: 'Helvetica-Bold',
-    color: MUTED,
-    letterSpacing: 1,
-    marginBottom: 6,
-    textTransform: 'uppercase',
+  fragilityCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 18,
   },
-  heroScore: {
-    fontSize: 42,
-    fontFamily: 'Helvetica-Bold',
-    color: BLUE,
-    lineHeight: 1,
+  fragilityBody: {
+    flex: 1,
   },
-  heroScoreUnit: {
-    fontSize: 18,
-    color: BLUE,
-  },
-  heroDesc: {
-    fontSize: 9.5,
-    color: MUTED,
-    marginTop: 8,
-    lineHeight: 1.5,
-  },
-  heroTitle: {
-    fontSize: 14,
+  fragilityTitle: {
+    fontSize: 11,
     fontFamily: 'Helvetica-Bold',
     color: DARK,
     marginBottom: 6,
   },
+  fragilityDesc: {
+    fontSize: 8.5,
+    color: MUTED,
+    lineHeight: 1.5,
+  },
+  radarCard: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  radarCardTitle: {
+    fontSize: 10,
+    fontFamily: 'Helvetica-Bold',
+    color: DARK,
+    marginBottom: 10,
+    alignSelf: 'flex-start',
+  },
 
-  /* Section title */
+  /* ── Analyse globale ── */
+  globalCard: {
+    backgroundColor: BG_CARD,
+    borderRadius: 14,
+    padding: '18 22',
+    border: `1 solid ${BORDER}`,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 20,
+    marginBottom: 20,
+  },
+  globalCircle: {
+    width: 74,
+    height: 74,
+    borderRadius: 37,
+    backgroundColor: BLUE,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: 0,
+  },
+  globalCircleText: {
+    fontSize: 20,
+    fontFamily: 'Helvetica-Bold',
+    color: WHITE,
+    lineHeight: 1,
+  },
+  globalCircleSub: {
+    fontSize: 7,
+    fontFamily: 'Helvetica-Bold',
+    color: 'rgba(255,255,255,0.8)',
+    letterSpacing: 0.6,
+    marginTop: 2,
+  },
+  globalBody: {
+    flex: 1,
+  },
+  globalTitle: {
+    fontSize: 13,
+    fontFamily: 'Helvetica-Bold',
+    color: DARK,
+    marginBottom: 5,
+  },
+  globalScore: {
+    fontSize: 9,
+    color: MUTED,
+    marginBottom: 5,
+  },
+  globalDesc: {
+    fontSize: 9,
+    color: MUTED,
+    lineHeight: 1.5,
+    marginBottom: 8,
+  },
+  adviceBox: {
+    backgroundColor: BLUE_LIGHT,
+    borderLeft: `3 solid ${BLUE}`,
+    borderRadius: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    marginBottom: 8,
+  },
+  adviceLabel: {
+    fontSize: 7.5,
+    fontFamily: 'Helvetica-Bold',
+    color: BLUE,
+    letterSpacing: 0.8,
+    marginBottom: 3,
+  },
+  adviceText: {
+    fontSize: 8.5,
+    color: '#1e40af',
+    lineHeight: 1.5,
+  },
+  chipsRow: {
+    flexDirection: 'row',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  chip: {
+    fontSize: 7.5,
+    fontFamily: 'Helvetica-Bold',
+    color: '#1e40af',
+    backgroundColor: BLUE_LIGHT,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    border: `1 solid #dbeafe`,
+  },
+
+  /* ── Progress bars ── */
+  barsCard: {
+    backgroundColor: BG_CARD,
+    borderRadius: 14,
+    padding: '16 20',
+    border: `1 solid ${BORDER}`,
+    marginBottom: 20,
+  },
   sectionTitle: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: 'Helvetica-Bold',
     color: DARK,
     marginBottom: 12,
     paddingBottom: 6,
     borderBottom: `1 solid ${BORDER}`,
   },
-
-  /* Radar bars */
-  radarSection: {
-    backgroundColor: WHITE,
-    borderRadius: 12,
-    padding: '16 20',
-    border: `1 solid ${BORDER}`,
-    marginBottom: 16,
+  barRow: {
+    marginBottom: 9,
   },
-  radarRow: {
-    marginBottom: 10,
-  },
-  radarHeader: {
+  barHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginBottom: 4,
+    alignItems: 'center',
   },
-  radarName: {
-    fontSize: 9.5,
+  barName: {
+    fontSize: 9,
     color: DARK,
     fontFamily: 'Helvetica-Bold',
+    flex: 1,
   },
-  radarPct: {
-    fontSize: 9.5,
+  barPct: {
+    fontSize: 9,
     fontFamily: 'Helvetica-Bold',
+    marginLeft: 6,
   },
-  radarTrack: {
-    height: 6,
-    backgroundColor: BLUE_LIGHT,
+  barTrack: {
+    height: 7,
+    backgroundColor: BLUE_BG,
     borderRadius: 999,
     overflow: 'hidden',
   },
-  radarFill: {
-    height: 6,
+  barFill: {
+    height: 7,
     borderRadius: 999,
   },
 
-  /* Pillar cards */
+  /* ── Pillar cards (page 2) ── */
   pillarsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
-    marginBottom: 16,
+    gap: 14,
   },
   pillar: {
     width: '47.5%',
-    backgroundColor: WHITE,
-    borderRadius: 10,
+    backgroundColor: BG_CARD,
+    borderRadius: 12,
     padding: '14 16',
     border: `1 solid ${BORDER}`,
   },
-  pillarHeader: {
+  pillarHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 6,
+    marginBottom: 7,
+    gap: 8,
   },
-  pillarName: {
+  pillarTitle: {
     fontSize: 9.5,
     fontFamily: 'Helvetica-Bold',
     color: DARK,
     flex: 1,
-    marginRight: 8,
   },
   badge: {
-    fontSize: 7.5,
+    fontSize: 7,
     fontFamily: 'Helvetica-Bold',
     paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingVertical: 3,
     borderRadius: 999,
   },
   pillarDesc: {
     fontSize: 8.5,
     color: MUTED,
     lineHeight: 1.5,
-    marginBottom: 6,
+    marginBottom: 7,
   },
   pillarAdvice: {
     fontSize: 8,
     color: '#1e40af',
-    backgroundColor: '#eff6ff',
+    backgroundColor: BLUE_LIGHT,
     borderRadius: 6,
-    padding: '5 8',
+    paddingHorizontal: 8,
+    paddingVertical: 5,
     lineHeight: 1.4,
-    marginTop: 4,
+    marginBottom: 7,
+  },
+  pillarAdviceLabel: {
+    fontSize: 7,
+    fontFamily: 'Helvetica-Bold',
+    color: BLUE,
+    marginBottom: 2,
   },
   pillarMeta: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: 8,
+    marginTop: 6,
     paddingTop: 6,
     borderTop: `1 solid ${BORDER}`,
   },
   pillarMetaText: {
-    fontSize: 8,
+    fontSize: 7.5,
     color: MUTED,
   },
-
-  /* Advice global */
-  adviceBox: {
-    backgroundColor: '#eff6ff',
-    borderLeft: `4 solid ${BLUE}`,
-    borderRadius: 8,
-    padding: '10 14',
-    marginBottom: 16,
-  },
-  adviceLabel: {
-    fontSize: 8,
+  pillarMetaBold: {
+    fontSize: 7.5,
     fontFamily: 'Helvetica-Bold',
-    color: BLUE,
-    letterSpacing: 0.8,
-    marginBottom: 4,
-  },
-  adviceText: {
-    fontSize: 9,
-    color: '#1e40af',
-    lineHeight: 1.5,
   },
 
-  /* Footer */
+  /* ── Footer ── */
   footer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
     borderTop: `1 solid ${BORDER}`,
-    padding: '10 32',
+    paddingHorizontal: 32,
+    paddingVertical: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -262,63 +397,77 @@ const s = StyleSheet.create({
   },
   footerText: {
     fontSize: 7.5,
-    color: MUTED,
-  },
-  footerPage: {
-    fontSize: 7.5,
-    color: MUTED,
+    color: '#9499ac',
   },
 })
 
-/* ─── Helpers ─────────────────────────────────────────── */
-const toneColors = {
-  red:    { bg: '#fef2f2', text: '#dc2626' },
-  orange: { bg: '#fff7ed', text: '#c2410c' },
-  green:  { bg: '#f0fdf4', text: '#15803d' },
-  blue:   { bg: '#eff6ff', text: '#1d4ed8' },
-}
+/* ─── Anneau de difficulte (View-based) ───────────────── */
+function DifficultyRing({ pct, tone }) {
+  const color = ringColor(tone)
+  const size = 110
+  const ring = size
+  const inner = size - 22
 
-function barColor(pct) {
-  if (pct >= 75) return '#16a34a'
-  if (pct >= 50) return '#3146f5'
-  if (pct >= 25) return '#f97316'
-  return '#ef4444'
+  return (
+    <View style={{ width: ring, height: ring, position: 'relative', alignItems: 'center', justifyContent: 'center' }}>
+      {/* Cercle extérieur coloré */}
+      <View style={{
+        position: 'absolute',
+        width: ring,
+        height: ring,
+        borderRadius: ring / 2,
+        backgroundColor: color,
+        opacity: 0.12,
+      }} />
+      {/* Cercle intérieur blanc (crée l'effet donut) */}
+      <View style={{
+        position: 'absolute',
+        width: inner,
+        height: inner,
+        borderRadius: inner / 2,
+        border: `5 solid ${color}`,
+        backgroundColor: WHITE,
+      }} />
+      {/* Texte centré */}
+      <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ fontSize: 20, fontFamily: 'Helvetica-Bold', color, lineHeight: 1 }}>
+          {pct}%
+        </Text>
+        <Text style={{ fontSize: 6.5, fontFamily: 'Helvetica-Bold', color: '#94a3b8', letterSpacing: 0.8, marginTop: 2 }}>
+          DIFFICULTE
+        </Text>
+      </View>
+    </View>
+  )
 }
-
-function formatDate() {
-  return new Intl.DateTimeFormat('fr-FR', {
-    day: 'numeric', month: 'long', year: 'numeric',
-  }).format(new Date())
-}
-
-const sectorLabels = {
-  commerce: 'Commerce', artisan: 'Artisanat',
-  liberal: 'Professions libérales', industrial: 'Industrie', services: 'Services',
-}
-const sizeLabels = { TPE: 'TPE', PME: 'PME' }
 
 /* ─── Radar SVG ───────────────────────────────────────── */
 function RadarSvg({ categories }) {
-  const cx = 160, cy = 155, maxR = 110
+  const cx = 140
+  const cy = 135
+  const maxR = 96
   const n = categories.length
   const angle = (i) => (2 * Math.PI * i) / n - Math.PI / 2
   const pt = (i, pct) => {
     const r = (pct / 100) * maxR
     return [cx + r * Math.cos(angle(i)), cy + r * Math.sin(angle(i))]
   }
-  const polyStr = (pct) => categories.map((_, i) => pt(i, pct).map(v => v.toFixed(1)).join(',')).join(' ')
-  const dataStr = categories.map((c, i) => pt(i, c.percentage).map(v => v.toFixed(1)).join(',')).join(' ')
+  const polyStr = (pct) =>
+    categories.map((_, i) => pt(i, pct).map((v) => v.toFixed(1)).join(',')).join(' ')
+  const dataStr = categories
+    .map((c, i) => pt(i, c.percentage).map((v) => v.toFixed(1)).join(','))
+    .join(' ')
 
   return (
-    <Svg viewBox="0 0 320 310" style={{ width: 320, height: 310 }}>
-      {/* Grille */}
+    <Svg viewBox="0 0 280 270" style={{ width: 240, height: 232 }}>
+      {/* Niveaux de grille */}
       {[25, 50, 75, 100].map((pct) => (
         <Polygon
           key={pct}
           points={polyStr(pct)}
-          fill={pct === 100 ? 'rgba(49,70,245,0.04)' : 'none'}
-          stroke="rgba(49,70,245,0.15)"
-          strokeWidth="0.8"
+          fill={pct === 100 ? 'rgba(49,70,245,0.03)' : 'none'}
+          stroke={pct === 100 ? 'rgba(49,70,245,0.2)' : 'rgba(49,70,245,0.1)'}
+          strokeWidth="0.7"
         />
       ))}
       {/* Axes */}
@@ -326,34 +475,93 @@ function RadarSvg({ categories }) {
         const [ex, ey] = pt(i, 100)
         return (
           <Line key={i} x1={cx} y1={cy} x2={ex} y2={ey}
-            stroke="rgba(49,70,245,0.12)" strokeWidth="0.8" />
+            stroke="rgba(49,70,245,0.12)" strokeWidth="0.7" />
         )
       })}
-      {/* Données */}
-      <Polygon points={dataStr} fill="rgba(49,70,245,0.15)" stroke="#3146f5" strokeWidth="1.5" />
-      {/* Points */}
+      {/* Polygone de données */}
+      <Polygon
+        points={dataStr}
+        fill="rgba(49,70,245,0.12)"
+        stroke={BLUE}
+        strokeWidth="1.5"
+      />
+      {/* Points de données */}
       {categories.map((cat, i) => {
         const [px, py] = pt(i, cat.percentage)
         return (
           <Circle key={cat.id} cx={px} cy={py} r="4"
-            fill={toneColors[cat.tone]?.text || BLUE} stroke={WHITE} strokeWidth="1.5" />
+            fill={getTone(cat.tone).bar} stroke={WHITE} strokeWidth="1.5" />
         )
       })}
       {/* Labels */}
       {categories.map((cat, i) => {
-        const labelR = maxR + 22
+        const labelR = maxR + 26
         const lx = cx + labelR * Math.cos(angle(i))
         const ly = cy + labelR * Math.sin(angle(i))
+        const anchor = Math.abs(Math.cos(angle(i))) < 0.15
+          ? 'middle'
+          : Math.cos(angle(i)) > 0 ? 'start' : 'end'
         return (
-          <Text key={cat.id}
-            x={lx} y={ly}
-            style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', fill: DARK, textAnchor: 'middle' }}
+          <Text key={`nom-${cat.id}`}
+            x={lx} y={ly - 4}
+            style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', fill: DARK, textAnchor: anchor }}
           >
-            {cat.nom} {cat.percentage}%
+            {cat.nom}
           </Text>
         )
       })}
+      {/* Scores sur les labels */}
+      {categories.map((cat, i) => {
+        const labelR = maxR + 26
+        const lx = cx + labelR * Math.cos(angle(i))
+        const ly = cy + labelR * Math.sin(angle(i))
+        const anchor = Math.abs(Math.cos(angle(i))) < 0.15
+          ? 'middle'
+          : Math.cos(angle(i)) > 0 ? 'start' : 'end'
+        return (
+          <Text key={`pct-${cat.id}`}
+            x={lx} y={ly + 9}
+            style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', fill: getTone(cat.tone).bar, textAnchor: anchor }}
+          >
+            {cat.percentage}%
+          </Text>
+        )
+      })}
+      {/* Score central */}
+      <Text x={cx} y={cy - 5}
+        style={{ fontSize: 16, fontFamily: 'Helvetica-Bold', fill: BLUE, textAnchor: 'middle' }}
+      >
+        {Math.round(categories.reduce((s, c) => s + c.percentage, 0) / n)}%
+      </Text>
+      <Text x={cx} y={cy + 9}
+        style={{ fontSize: 6.5, fontFamily: 'Helvetica-Bold', fill: '#94a3b8', textAnchor: 'middle', letterSpacing: 0.8 }}
+      >
+        MAITRISE
+      </Text>
     </Svg>
+  )
+}
+
+/* ─── En-tête réutilisable ────────────────────────────── */
+function Header({ title, sub, date, sector, size }) {
+  return (
+    <View style={s.header}>
+      <View style={s.headerBrand}>
+        <View style={s.headerBadge}>
+          <Text style={s.headerBadgeText}>CMB</Text>
+        </View>
+        <View>
+          <Text style={s.headerTitle}>{title}</Text>
+          <Text style={s.headerSub}>{sub}</Text>
+        </View>
+      </View>
+      <View style={s.headerRight}>
+        <Text style={s.headerDate}>Rapport du {date}</Text>
+        {(sector || size) ? (
+          <Text style={s.headerChip}>{[size, sector].filter(Boolean).join(' · ')}</Text>
+        ) : null}
+      </View>
+    </View>
   )
 }
 
@@ -367,142 +575,162 @@ export default function DiagnosticDocument({ diagnostic }) {
   const sector = filters.sector ? (sectorLabels[filters.sector] || filters.sector) : null
   const size   = filters.size   ? (sizeLabels[filters.size]     || filters.size)   : null
 
+  const globalDifficulty = global.difficultyPercentage ?? 0
+  const globalScore      = global.percentage ?? 0
+  const globalTone       = global.tone || 'red'
+
   return (
     <Document
-      title="Diagnostic – Comment va ma boîte ?"
+      title="Diagnostic – Comment va ma boite ?"
       author="CCI Bordeaux Gironde"
-      subject="Résultats du diagnostic d'entreprise"
+      subject="Resultats du diagnostic d'entreprise"
     >
-      {/* ── Page 1 : synthèse ── */}
+      {/* ══════════════════ PAGE 1 : Synthese ══════════════════ */}
       <Page size="A4" style={s.page}>
-        {/* Header */}
-        <View style={s.header}>
-          <View style={s.headerBrand}>
-            <View style={s.headerBadge}>
-              <Text style={s.headerBadgeText}>CMB</Text>
-            </View>
-            <View>
-              <Text style={s.headerTitle}>Comment va ma boîte ?</Text>
-              <Text style={s.headerSub}>CCI Bordeaux Gironde</Text>
-            </View>
-          </View>
-          <View>
-            <Text style={s.headerDate}>Rapport du {date}</Text>
-            {(sector || size) ? (
-              <Text style={[s.headerDate, { marginTop: 3 }]}>
-                {[size, sector].filter(Boolean).join(' · ')}
-              </Text>
-            ) : null}
-          </View>
-        </View>
+        <Header
+          title="Comment va ma boite ?"
+          sub="CCI Bordeaux Gironde"
+          date={date}
+          sector={sector}
+          size={size}
+        />
 
         <View style={s.body}>
-          {/* Hero */}
-          <View style={s.heroRow}>
-            <View style={[s.heroCard, { alignItems: 'center', maxWidth: 140 }]}>
-              <Text style={s.heroLabel}>Score global</Text>
-              <Text style={s.heroScore}>
-                {global.percentage ?? 0}
-                <Text style={s.heroScoreUnit}>%</Text>
-              </Text>
-              <Text style={[s.heroLabel, { marginTop: 6 }]}>
-                {global.score ?? 0} / {global.scoreMax ?? 0} pts
-              </Text>
+
+          {/* ── Ligne du haut : anneau fragilite + radar ── */}
+          <View style={s.topRow}>
+            {/* Carte fragilite */}
+            <View style={[s.card, s.fragilityCard]}>
+              <DifficultyRing pct={globalDifficulty} tone={globalTone} />
+              <View style={s.fragilityBody}>
+                <Text style={s.fragilityTitle}>
+                  {global.title || 'Diagnostic calcule'}
+                </Text>
+                <Text style={s.fragilityDesc}>
+                  {global.description || 'Resultats calcules a partir des reponses au questionnaire.'}
+                </Text>
+              </View>
             </View>
 
-            <View style={[s.heroCard, { flex: 1 }]}>
-              <Text style={s.heroTitle}>{global.title || 'Diagnostic calculé'}</Text>
-              <Text style={s.heroDesc}>
-                {global.description || 'Résultats calculés à partir de vos réponses au questionnaire.'}
+            {/* Carte radar */}
+            {categories.length >= 3 ? (
+              <View style={[s.card, s.radarCard]}>
+                <Text style={s.radarCardTitle}>Repartition des scores</Text>
+                <RadarSvg categories={categories} />
+              </View>
+            ) : null}
+          </View>
+
+          {/* ── Analyse globale ── */}
+          <View style={s.globalCard}>
+            <View style={s.globalCircle}>
+              <Text style={s.globalCircleText}>{globalScore}%</Text>
+              <Text style={s.globalCircleSub}>MAITRISE</Text>
+            </View>
+            <View style={s.globalBody}>
+              <Text style={s.globalTitle}>Analyse Globale</Text>
+              <Text style={s.globalScore}>
+                Score global : {global.score ?? 0} / {global.scoreMax ?? 0} points — {globalScore}% de maitrise
+              </Text>
+              <Text style={s.globalDesc}>
+                {global.description || 'Les reponses renseignees permettent de produire un diagnostic coherent.'}
               </Text>
               {global.advice ? (
-                <View style={[s.adviceBox, { marginTop: 10, marginBottom: 0 }]}>
-                  <Text style={s.adviceLabel}>CONSEIL</Text>
+                <View style={s.adviceBox}>
+                  <Text style={s.adviceLabel}>CONSEIL PERSONNALISE</Text>
                   <Text style={s.adviceText}>{global.advice}</Text>
+                </View>
+              ) : null}
+              {(size || sector) ? (
+                <View style={s.chipsRow}>
+                  {size   ? <Text style={s.chip}>Taille : {size}</Text>   : null}
+                  {sector ? <Text style={s.chip}>Secteur : {sector}</Text> : null}
                 </View>
               ) : null}
             </View>
           </View>
 
-          {/* Radar */}
-          {categories.length >= 3 ? (
-            <View style={[s.radarSection, { alignItems: 'center' }]}>
-              <Text style={s.sectionTitle}>Répartition des scores par catégorie</Text>
-              <RadarSvg categories={categories} />
-            </View>
-          ) : null}
-
-          {/* Barres synthèse */}
-          <View style={s.radarSection}>
-            <Text style={s.sectionTitle}>Taux de maîtrise par catégorie</Text>
+          {/* ── Barres de maitrise ── */}
+          <View style={s.barsCard}>
+            <Text style={s.sectionTitle}>Taux de maitrise par categorie</Text>
             {categories.map((cat) => {
               const color = barColor(cat.percentage)
-              const tone  = toneColors[cat.tone] || toneColors.blue
               return (
-                <View key={cat.id} style={s.radarRow}>
-                  <View style={s.radarHeader}>
-                    <Text style={s.radarName}>{cat.nom}</Text>
-                    <Text style={[s.radarPct, { color }]}>{cat.percentage}%</Text>
+                <View key={cat.id} style={s.barRow}>
+                  <View style={s.barHeader}>
+                    <Text style={s.barName}>{cat.nom}</Text>
+                    <Text style={[s.barPct, { color }]}>{cat.percentage}%</Text>
                   </View>
-                  <View style={s.radarTrack}>
-                    <View style={[s.radarFill, { width: `${cat.percentage}%`, backgroundColor: color }]} />
+                  <View style={s.barTrack}>
+                    <View style={[s.barFill, { width: `${cat.percentage}%`, backgroundColor: color }]} />
                   </View>
                 </View>
               )
             })}
           </View>
+
         </View>
 
-        {/* Footer */}
         <View style={s.footer} fixed>
           <Text style={s.footerText}>© CCI Bordeaux Gironde — Diagnostic confidentiel</Text>
-          <Text style={s.footerPage} render={({ pageNumber, totalPages }) =>
+          <Text style={s.footerText} render={({ pageNumber, totalPages }) =>
             `Page ${pageNumber} / ${totalPages}`
           } />
         </View>
       </Page>
 
-      {/* ── Page 2 : détail par catégorie ── */}
+      {/* ══════════════════ PAGE 2 : Detail par pilier ══════════ */}
       {categories.length > 0 ? (
         <Page size="A4" style={s.page}>
-          <View style={s.header}>
-            <View style={s.headerBrand}>
-              <View style={s.headerBadge}>
-                <Text style={s.headerBadgeText}>CMB</Text>
-              </View>
-              <View>
-                <Text style={s.headerTitle}>Analyse détaillée</Text>
-                <Text style={s.headerSub}>Comment va ma boîte ?</Text>
-              </View>
-            </View>
-            <Text style={s.headerDate}>{date}</Text>
-          </View>
+          <Header
+            title="Analyse detaillee"
+            sub="Comment va ma boite ?"
+            date={date}
+            sector={sector}
+            size={size}
+          />
 
-          <View style={s.body}>
-            <Text style={[s.sectionTitle, { marginTop: 8 }]}>Détail par pilier</Text>
+          <View style={[s.body, { paddingTop: 20 }]}>
+            <Text style={[s.sectionTitle, { marginBottom: 14 }]}>Detail par pilier</Text>
             <View style={s.pillarsGrid}>
               {categories.map((cat) => {
-                const tone = toneColors[cat.tone] || toneColors.blue
+                const tone = getTone(cat.tone)
+                const color = barColor(cat.percentage)
                 return (
                   <View key={cat.id} style={s.pillar}>
-                    <View style={s.pillarHeader}>
-                      <Text style={s.pillarName}>
-                        {cat.ordre ? `${cat.ordre}. ` : ''}{cat.nom}
+                    {/* Titre + badge difficulte */}
+                    <View style={s.pillarHeaderRow}>
+                      <Text style={s.pillarTitle}>
+                        {cat.ordre ? `Partie ${cat.ordre} : ` : ''}{cat.nom}
                       </Text>
-                      <Text style={[s.badge, { backgroundColor: tone.bg, color: tone.text }]}>
-                        {cat.difficultyPercentage}% diff.
+                      <Text style={[s.badge, { backgroundColor: tone.bg, color: tone.text, border: `1 solid ${tone.border}` }]}>
+                        Difficulte : {cat.difficultyPercentage}%
                       </Text>
                     </View>
+
+                    {/* Barre de maitrise mini */}
+                    <View style={[s.barTrack, { marginBottom: 8 }]}>
+                      <View style={[s.barFill, { width: `${cat.percentage}%`, backgroundColor: color }]} />
+                    </View>
+
+                    {/* Description */}
                     {cat.description ? (
                       <Text style={s.pillarDesc}>{cat.description}</Text>
                     ) : null}
+
+                    {/* Conseil */}
                     {cat.advice ? (
-                      <Text style={s.pillarAdvice}>💡 {cat.advice}</Text>
+                      <View style={s.pillarAdvice}>
+                        <Text style={s.pillarAdviceLabel}>CONSEIL</Text>
+                        <Text>{cat.advice}</Text>
+                      </View>
                     ) : null}
+
+                    {/* Meta score */}
                     <View style={s.pillarMeta}>
-                      <Text style={s.pillarMetaText}>{cat.score} / {cat.scoreMax} pts</Text>
-                      <Text style={[s.pillarMetaText, { fontFamily: 'Helvetica-Bold', color: barColor(cat.percentage) }]}>
-                        {cat.percentage}% maîtrise
+                      <Text style={s.pillarMetaText}>{cat.score} / {cat.scoreMax} points</Text>
+                      <Text style={[s.pillarMetaBold, { color }]}>
+                        {cat.percentage}% de maitrise
                       </Text>
                     </View>
                   </View>
@@ -513,7 +741,7 @@ export default function DiagnosticDocument({ diagnostic }) {
 
           <View style={s.footer} fixed>
             <Text style={s.footerText}>© CCI Bordeaux Gironde — Diagnostic confidentiel</Text>
-            <Text style={s.footerPage} render={({ pageNumber, totalPages }) =>
+            <Text style={s.footerText} render={({ pageNumber, totalPages }) =>
               `Page ${pageNumber} / ${totalPages}`
             } />
           </View>

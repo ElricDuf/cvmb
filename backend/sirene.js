@@ -34,6 +34,66 @@ function mapEffectifToWorkforce(code) {
 }
 
 /**
+ * Déduit la taille « TPE » ou « PME » à partir du code tranche d'effectif INSEE.
+ * L'application ne propose que ces deux tailles :
+ *   - TPE (micro-entreprise) : 0 à 9 salariés (codes 00 à 03)
+ *   - PME : 10 salariés et plus (codes 11 et au-dessus)
+ * Codes INSEE : https://www.sirene.fr/sirene/public/variable/tefen
+ * @param {string|null} code
+ * @returns {('TPE'|'PME'|null)} Taille ou null si inconnue
+ */
+function mapEffectifToTaille(code) {
+  if (!code) return null
+  const c = String(code).trim()
+  if (['00', '01', '02', '03'].includes(c)) return 'TPE'
+  if (['11', '12', '21', '22', '31', '32', '41', '42', '51', '52', '53'].includes(c)) {
+    return 'PME'
+  }
+  return null // NN ou inconnu : on laisse l'utilisateur choisir
+}
+
+/**
+ * Repli sur la « catégorie d'entreprise » INSEE (PME / ETI / GE) quand la tranche
+ * d'effectif est absente. L'app ne gère que TPE/PME : ETI et GE sont ramenées à PME.
+ * « PME » seule est ambiguë (peut être une TPE) : on laisse l'utilisateur trancher.
+ * @param {string|null} categorie
+ * @returns {('PME'|null)}
+ */
+function mapCategorieToTaille(categorie) {
+  if (!categorie) return null
+  const c = String(categorie).trim().toUpperCase()
+  if (c === 'ETI' || c === 'GE') return 'PME'
+  return null
+}
+
+/**
+ * Mappe un code APE/NAF (ex. "47.11F") vers l'un des secteurs proposés par
+ * le formulaire : merchant | artisan | liberal | industrial | services.
+ * On se base sur la division NAF (2 premiers chiffres). C'est une estimation :
+ * l'utilisateur peut toujours corriger le secteur manuellement.
+ * @param {string|null} ape
+ * @returns {string|null} identifiant de secteur ou null
+ */
+function mapApeToSector(ape) {
+  if (!ape) return null
+  const division = parseInt(String(ape).replace(/\D/g, '').slice(0, 2), 10)
+  if (Number.isNaN(division)) return null
+
+  // Industries extractives, manufacturières, énergie, eau/déchets (05–39)
+  if (division >= 5 && division <= 39) return 'industrial'
+  // Construction / bâtiment (41–43) : majoritairement de l'artisanat
+  if (division >= 41 && division <= 43) return 'artisan'
+  // Commerce de gros et de détail, réparation auto (45–47)
+  if (division >= 45 && division <= 47) return 'merchant'
+  // Professions libérales : juridique, comptable, conseil, ingénierie,
+  // scientifique, vétérinaire (69–75) et santé humaine (86)
+  if ((division >= 69 && division <= 75) || division === 86) return 'liberal'
+  // Tout le reste (transport, hébergement-restauration, information, finance,
+  // immobilier, services administratifs, enseignement, social, arts…) → services
+  return 'services'
+}
+
+/**
  * Extrait l'année (YYYY) d'une date INSEE de la forme "YYYY-MM-DD".
  * @param {string|null} dateStr
  * @returns {string|null}
@@ -102,6 +162,7 @@ async function getEntrepriseBySiret(siret) {
       (unite && unite.activitePrincipaleUniteLegale) ||
       null
     const trancheEffectif = unite?.trancheEffectifsUniteLegale || unite?.trancheEffectifUniteLegale || null
+    const categorieEntreprise = unite?.categorieEntreprise || null
     const anneeCreation = extractYear(
       unite?.dateCreationUniteLegale || etab?.dateCreationEtablissement || null,
     )
@@ -115,6 +176,10 @@ async function getEntrepriseBySiret(siret) {
       activitePrincipale,
       trancheEffectif,
       effectifLabel: mapEffectifToWorkforce(trancheEffectif),
+      // Taille (TPE/PME) déduite de l'effectif, avec repli sur la catégorie INSEE
+      tailleEntreprise: mapEffectifToTaille(trancheEffectif) || mapCategorieToTaille(categorieEntreprise),
+      // Secteur de l'app déduit du code APE/NAF
+      secteur: mapApeToSector(activitePrincipale),
       anneeCreation,
       raw: data,
       found: true,
@@ -171,5 +236,8 @@ module.exports = {
   getEntrepriseBySiret,
   getEntrepriseBySiren,
   mapEffectifToWorkforce,
+  mapEffectifToTaille,
+  mapCategorieToTaille,
+  mapApeToSector,
   extractYear,
 }

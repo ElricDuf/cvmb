@@ -29,3 +29,9 @@ If you already have PostgreSQL running, `npm run dev` is enough.
 Files of interest
 - frontend
 - backend
+
+comptes admins :
+
+superadmin@cvmb.fr / SuperAdmin123!
+admin@cci33.fr / AdminCci123!
+admin@cci75.fr / AdminCci123!
